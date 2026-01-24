@@ -190,8 +190,8 @@ int PrintDic(Dic* Pro, const char* mode) {
         printf("\n"); }
     return count; }
  
-int Fpi(Dic* Pro, const char *s, int *i) {                         // &i первое вхождение в словарь
-    if (!Pro || Pro->count <= 0) { if (i) *i = -1; return 0; }     // b на выходе число совпадений i+0,..,i+b-1 
+int Fpi(Dic* Pro, const char *s, int *i) {
+    if (!Pro || Pro->count <= 0) { if (i) *i = -1; return 0; }
     if (!s || *s == '\0') { if (i) *i = 0; return Pro->count; }
     int in_len = StrLenB(s);
     int low = 0, high = Pro->count - 1;
@@ -324,7 +324,7 @@ void Analitics(Dic* Pro, int* Flag) {
         if (Pro->dat[i].vis > max_vis) max_vis = Pro->dat[i].vis; }
     if (max_vis == 0) return;
     printf(Cls Cna "👁️ " Cnu "%d" Cna "\n\n", max_vis);
-    printf( Cna "%-*s " Cnu "%*s " Cnu "%*s " Cnu "%*s " Cnu "📊\n", // <-- Добавлен заголовок "📊"
+    printf( Cna "%-*s " Cnu "%*s " Cnu "%*s " Cnu "%*s " Cnu "📊\n",
            Pro->MaxN + 6, "📦", 
            Pro->MaxP, "💸",               
            Pro->MaxT, " 🔄%",              
@@ -339,13 +339,13 @@ void Analitics(Dic* Pro, int* Flag) {
         const char* price_status_symbol = "";
         const char* price_status_color = Cna;
         if (Pro->dat[i].price > avg_price) {
-            price_status_symbol = "🔺"; // Цена выше средней (плохо)
+            price_status_symbol = "🔺";
             price_status_color = Cam; } 
         else if (Pro->dat[i].price < avg_price) {
-                  price_status_symbol = "✅"; // Цена ниже средней (хорошо/акция)
+                  price_status_symbol = "✅";
                   price_status_color = Cap; } 
               else price_status_symbol = "➖"; // Цена равна средней
-        printf(Cnn "%02d " "%s%-*s " Cnu "%*d " "%s%*d%% " Cnu "%*d%% " "%s%s\n", // <-- Добавлены %s%s для статуса
+        printf(Cnn "%02d " "%s%-*s " Cnu "%*d " "%s%*d%% " Cnu "%*d%% " "%s%s\n",
                j++, color, Pro->MaxN + Pro->dat[i].FCN, Pro->dat[i].name,
                Pro->MaxP, avg_price, color, Pro->MaxT, frequency, Pro->MaxV, share,
                price_status_color, price_status_symbol); }
