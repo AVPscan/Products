@@ -1,0 +1,16 @@
+# Игнорировать всё
+*
+
+# Но разрешить эти типы файлов
+!DONATIONS.md
+!sys_linux.c
+!sys.h
+!parser.c
+!makefile
+!README.md
+!LICENSE
+!NOTICE
+!products.txt
+!.gitignore
+# Игнорировать
+
