@@ -4,24 +4,35 @@
 #include <stddef.h>
 #include <stdarg.h>
 
-#define USE_RGB_PALETTE // комментировать если нужно попроще не RGB цвет
-#ifdef USE_RGB_PALETTE
-  #define Cnn "\033[38;2;128;128;128m"
-  #define Cna "\033[38;2;218;165;32m"
-  #define Cpr "\033[38;2;50;205;50m"
-  #define Cnu "\033[38;2;138;43;226m"
-  #define Cap "\033[38;2;60;179;113m"
-  #define Cam "\033[38;2;220;20;60m"
-#else
-  #define Cnn "\033[90m"
-  #define Cna "\033[33m"
-  #define Cpr "\033[32m"
-  #define Cnu "\033[35m"
-  #define Cap "\033[33m"
-  #define Cam "\033[31m"
-#endif
-#define Crs   "\033[0m"
+//#define USE_BW
+#define USE_RGB
 
+#ifdef USE_BW
+  #define Cnn ""
+  #define Cna ""
+  #define Cpr ""
+  #define Cnu ""
+  #define Cap ""
+  #define Cam ""
+#else
+  #ifdef USE_RGB
+    #define Cnn "\033[38;2;120;120;120m"
+    #define Cna "\033[38;2;210;105;30m"
+    #define Cpr "\033[38;2;184;134;11m"
+    #define Cnu "\033[38;2;30;144;255m"
+    #define Cap "\033[38;2;34;139;34m"
+    #define Cam "\033[38;2;220;20;60m"
+  #else // обычные
+    #define Cnn "\033[38;5;244m" // Номер (Серый)
+    #define Cna "\033[38;5;166m" // Имя (Оранжевый)
+    #define Cpr "\033[38;5;178m" // Цена (Золотистый) — хорошо выделяется
+    #define Cnu "\033[38;5;27m"  // Число (Синий)
+    #define Cap "\033[38;5;28m"  // Рост/Плюс (Темно-зеленый)
+    #define Cam "\033[38;5;160m" // Падение/Минус (Красный)
+  #endif
+#endif
+
+#define Crs   "\033[0m"
 #define HCur  "\033[?25l"
 #define ShCur "\033[?25h"
 #define Cls   "\033[2J\033[H"

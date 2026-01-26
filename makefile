@@ -1,11 +1,6 @@
-# ============================================
-# Makefile для достижения 27KB
-# С правильными POSIX флагами
-# ============================================
-
 CC ?= gcc
 TARGET = products
-SOURCES = parser.c sys_linux.c
+SOURCES = products.c sys_linux.c
 
 # Флаги для минимального размера
 CFLAGS_TINY = -std=c11 -Os -DNDEBUG -Wall -Wextra \
@@ -16,7 +11,7 @@ CFLAGS_TINY = -std=c11 -Os -DNDEBUG -Wall -Wextra \
               -fno-ident
 
 LDFLAGS_TINY = -Wl,--gc-sections -Wl,--strip-all -Wl,-s \
-               -Wl,--build-id=none -Wl,-z,norelro
+               -Wl,--build-id=none -Wl,-z,norelro -Wl,-z,max-page-size=4096
 
 .PHONY: all tiny clean run size analyze help
 
@@ -69,12 +64,11 @@ analyze: $(TARGET)
 	@echo "3. Секции:"
 	@size $(TARGET) 2>/dev/null || echo "   (size не доступен)"
 
-# Разные компиляторы
+# Разные компиляторы // c: CFLAGS_TINY  += -Oz -flto -fvisibility=hidden
 g: CC = gcc
 g: tiny
 
 c: CC = clang
-c: CFLAGS_TINY += -Oz -flto -fvisibility=hidden
 c: tiny
 
 # Очистка
@@ -109,3 +103,4 @@ help:
 	@echo "  make bench     - Тест скорости"
 	@echo ""
 	@echo "Текущий компилятор: $(CC)"
+
