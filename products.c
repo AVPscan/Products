@@ -11,19 +11,15 @@
 
 char nc[BufN+1];
 extern unsigned char FileBuf[DBuf+NBuf];
-static int LH[128];
+static int LH[Mname];
 static int kpr = 0;
 
-typedef struct { int n3, n2, n1, bnam, cnam, sum, tqy, qy; } PS_t;
-PS_t PS;
+typedef struct { char* name; int price, qy, summa, tqy, vis, nameC,FCN,FCP,FCQ,FCS,FCT,FCV; } DicDat;
 typedef struct { 
-    char* name;
-    int price, qy, summa, tqy, vis; 
-    int nameC,FCN,FCP,FCQ,FCS,FCT,FCV; } DicDat;
-typedef struct { 
-    DicDat* dat;
-    int count, cap; 
-    int MaxN,MaxP,MaxQ,MaxS,MaxT,MaxV; } Dic;
+    DicDat* dat; 
+    int cap, count,MaxN,MaxP,MaxQ,MaxS,MaxT,MaxV;
+    int Fsum[3]; // 0:pro, 1:res, 2:ana
+} Dic;
 
 int StringBC(const char *s, int *c) { 
     int b = 0, i = 0; if (!s) { if (c) *c = 0; return 0; } 
@@ -41,7 +37,7 @@ int StrLen(const char *s) {
     while (*p) { if ((*p++ & 0xC0) != 0x80) count++; }
     return count; }
        
-int char_type(const unsigned char* buf, int* len) {
+int CharType(const unsigned char* buf, int* len) {
     unsigned char c = *buf;
     if (c < 128) { *len = 1;
         if (c >= '0' && c <= '9') return 1;
@@ -51,7 +47,7 @@ int char_type(const unsigned char* buf, int* len) {
         return 3; }
     int l;
     if ((c & 0xE0) == 0xC0)      l = 2;
-    else if ((c & 0xF0) == 0xE0) l = 3; 
+    else if ((c & 0xF0) == 0xE0) l = 3;
         else if ((c & 0xF8) == 0xF0) l = 4;
             else { *len = 1; return 5; }
     *len = l; for (int i = 1; i < l; i++) if ((buf[i] & 0xC0) != 0x80) return 5;
@@ -70,7 +66,9 @@ void ClearDic(Dic* Pro) {
     if (Pro->dat) { for (int i = 0; i < Pro->count; i++) os_free(Pro->dat[i].name);
                     os_free(Pro->dat); }
     os_memset(Pro, 0, sizeof(Dic)); }
-    
+
+typedef struct { int n3, n2, n1, bnam, cnam, sum, tqy, qy, tst; } PS_t;
+PS_t PS;
 int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode) {
     int low = 0, cmp = 0, high = Pro->count - 1, mid, r, s;
     if (Pro->MaxN < PS.cnam) Pro->MaxN = PS.cnam;
@@ -104,37 +102,36 @@ int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode)
         Pro->dat = tmp; }
     for (int i = Pro->count; i > low; i--) Pro->dat[i] = Pro->dat[i-1];
     Pro->dat[low].name = os_strdup(name); Pro->dat[low].nameC = PS.cnam; Pro->dat[low].FCN = PS.bnam - PS.cnam;
-    if (mode) { Pro->dat[low].summa = summa; Pro->dat[low].tqy = tqy; Pro->dat[low].vis = qy;
-                Pro->dat[low].FCS = PS.sum; Pro->dat[low].FCT = PS.tqy; Pro->dat[low].FCV = PS.qy;
+    if (mode) { Pro->dat[low].summa = summa; Pro->dat[low].tqy = tqy; Pro->dat[low].vis = qy; Pro->dat[low].price = summa/tqy;
+                Pro->dat[low].FCS = PS.sum; Pro->dat[low].FCT = PS.tqy; for (r = 1, s = Pro->dat[low].price;   s > 9; s /= 10, r++);
+                Pro->dat[low].FCV = PS.qy; Pro->dat[low].FCP = r;
                 if (Pro->MaxS < Pro->dat[low].FCS) Pro->MaxS = Pro->dat[low].FCS;
                 if (Pro->MaxT < Pro->dat[low].FCT) Pro->MaxT = Pro->dat[low].FCT;
                 if (Pro->MaxV < Pro->dat[low].FCV) Pro->MaxV = Pro->dat[low].FCV; }
     else { if (tqy > 99) { tqy = 99; PS.tqy = 2; }
            Pro->dat[low].price = summa; Pro->dat[low].qy = tqy; Pro->dat[low].FCP = PS.sum; Pro->dat[low].FCQ = PS.tqy; 
            Pro->dat[low].summa = 0; Pro->dat[low].tqy = 0; Pro->dat[low].vis = 0; Pro->dat[low].FCS = 1; Pro->dat[low].FCT = 1; Pro->dat[low].FCV = 1;
-           if (Pro->MaxQ < Pro->dat[low].FCQ) Pro->MaxQ = Pro->dat[low].FCQ;
-           if (Pro->MaxP < Pro->dat[low].FCP) Pro->MaxP = Pro->dat[low].FCP; }
+           if (Pro->MaxQ < Pro->dat[low].FCQ) Pro->MaxQ = Pro->dat[low].FCQ; }
+    if (Pro->MaxP < Pro->dat[low].FCP) Pro->MaxP = Pro->dat[low].FCP;
     Pro->count++; return low;}
-
 int AddDic(Dic* Pro, const char* name, int summa, int tqy) { int i;
     if ( !name || name[0] == 0 || summa < 1 || tqy < 0) return -1;
     PS.sum = 1; for ( i = summa; i > 9 ; i /= 10,  PS.sum++);
     PS.tqy = 1; for ( i = tqy; i > 9 ; i /= 10,  PS.tqy++);
     PS.bnam= StringBC(name, &PS.cnam);
     return AddDicFull(Pro, name, summa, tqy, 0, 0); }
-
 void ParseBuf( Dic* Pro, unsigned char* buf, unsigned char* out, int mode) {
     int type,len,i,j; 
       while (buf < out) {
-        if ((type = char_type(buf, &len)) == 1) { while (buf < out && (type = char_type(buf, &len)) == 1 && *buf == '0') buf++ ;
+        if ((type = CharType(buf, &len)) == 1) { while (buf < out && (type = CharType(buf, &len)) == 1 && *buf == '0') buf++ ;
                        if (type == 1) { PS.n3 = PS.n2; PS.n2 = PS.n1; PS.n1 = 0 ;
                           PS.qy = PS.tqy; PS.tqy = PS.sum; PS.sum = 0;
-                          while (buf < out && (type = char_type(buf, &len)) == 1 && PS.sum < 9 ) { PS.n1 = PS.n1 * 10 + *buf - '0'; PS.sum++ ; buf++ ; } 
-                          while (buf < out && (type = char_type(buf, &len)) == 1) buf++ ; } }
+                          while (buf < out && (type = CharType(buf, &len)) == 1 && PS.sum < 9 ) { PS.n1 = PS.n1 * 10 + *buf - '0'; PS.sum++ ; buf++ ; } 
+                          while (buf < out && (type = CharType(buf, &len)) == 1) buf++ ; } }
         if (type == 2) { PS.cnam = 0; j = 0; int sq = 0; 
-            while (buf < out) { type = char_type(buf, &len);
+            while (buf < out) { type = CharType(buf, &len);
                 if (type == 1 || type == 3) break; 
-                if (type == 2) { for (i = 0; i < len && j < 127; i++) nc[j++] = buf[i];
+                if (type == 2) { for (i = 0; i < len && j < BufN; i++) nc[j++] = buf[i];
                     PS.cnam++; sq = 0; } 
                 else if (type == 4) { if (j > 0 && !sq) { nc[j++] = ' '; sq = 1; PS.cnam++; } }
                 buf += len; }
@@ -143,51 +140,109 @@ void ParseBuf( Dic* Pro, unsigned char* buf, unsigned char* out, int mode) {
             buf -= len; }
         if (PS.cnam) switch (mode) {
                         case 0: if (PS.sum) { j = AddDicFull(Pro, nc, PS.n1, 0, 0, 0); PS.tqy = 0; PS.qy = 0; }
+                                __attribute__((fallthrough));
                         case 1: if (PS.tqy) { PS.n1 *= PS.n2; PS.n3 = 1; PS.qy = 1; PS.sum = 1; for ( i = PS.n1; i > 9 ; i /= 10,  PS.sum++); }
+                                __attribute__((fallthrough));
                         case 2: if (PS.qy) j = AddDicFull(Pro, nc, PS.n1, PS.n2, PS.n3, 1);
-                                PS.cnam = 0; PS.sum = 0; PS.tqy = 0;  PS.qy = 0; }
+                                PS.tst += PS.n1; PS.cnam = 0; PS.sum = 0; PS.tqy = 0;  PS.qy = 0; }
         buf+=len; } }
 
 int LoadDic(Dic* Pro, const char* filename) {
-    int i=(strcmp(filename, DBase) == 0)?0:(strncmp(filename, "rep", 3) == 0)?1:(strncmp(filename, "ana", 3) == 0)?2:3;
-    if (i == 3) return -2;
-    size_t Tail = 0; void* File = os_open_file(filename);
-    if (!File) return -1;
-    PS.cnam = 0; PS.sum = 0; PS.tqy = 0;  PS.qy = 0;
-    while (1) {
-        size_t LoadFLen = os_read_file(File, FileBuf + Tail, DBuf); size_t SaveFLen = LoadFLen + Tail;
-        if (SaveFLen == 0) break;
-        size_t SaveLen = SaveFLen; if ( LoadFLen == DBuf) { while (SaveLen > 0 && (FileBuf[SaveLen-1] > 32)) SaveLen--;
-                                                            if (SaveLen == 0) SaveLen = SaveFLen; }
-        ParseBuf(Pro, FileBuf, FileBuf+SaveLen, i);
-        Tail = SaveFLen - SaveLen; if (Tail > 0) memmove(FileBuf, FileBuf + SaveLen, Tail);
-        if ( LoadFLen < DBuf) break; }
-    os_close_file(File); return Pro->count; }
+    int f = -1,i = (strcmp(filename, DBase) == 0) ? 0 : (strncmp(filename, "rep", 3) == 0) ? 1 : (strncmp(filename, "ana", 3) == 0) ? 2 : 3;
+    if (i < 3) {
+        f++; size_t Tail = 0; void* File = os_open_file(filename);
+        if (File) {
+            f++; PS.cnam = 0; PS.sum = 0; PS.tqy = 0;  PS.qy = 0; PS.tst = 0;
+            while (1) {
+                size_t lf = os_read_file(File, FileBuf + Tail, DBuf); size_t sf = lf + Tail; if (sf == 0) break;
+                size_t sl = sf; if (lf == DBuf) { while (sl > 0 && (FileBuf[sl-1] > 32)) sl--;
+                                                  if (sl == 0) sl = sf; }
+                ParseBuf(Pro, FileBuf, FileBuf+sl, i); Tail = sf - sl; if (Tail > 0) memmove(FileBuf, FileBuf + sl, Tail);
+                if (lf < DBuf) break; }
+            os_close_file(File);
+            Pro->Fsum[i] = PS.tst; 
+            if (PS.n1 > 0 && PS.tst != PS.n1) { Pro->Fsum[i] = 0; f = -2; } } }
+    return f; }
     
 void SaveDic(Dic* Pro, const char* filename) {
-    int i = (strcmp(filename, DBase) == 0)?0:(strncmp(filename, "rep", 3) == 0)?1:(strncmp(filename, "ana", 3) == 0)?2:3; if (i == 3) return;
-    void* f = os_create_file(filename); int j = 1; int s = 0;
-    switch (i) {
-        case 0: for (int i = 0; i < Pro->count; i++) os_print_file(f, "%*d %s\n", Pro->MaxP, Pro->dat[i].price, STU(Pro->dat[i].name));
+    int i = (strcmp(filename, DBase) == 0) ? 0 : 
+            (strncmp(filename, "rep", 3) == 0) ? 1 : 
+            (strncmp(filename, "ana", 3) == 0) ? 2 : 3; 
+    if (i == 3) return;
+    void* f = os_create_file(filename); 
+    int j = 0, s = 0;
+    for (int k = 0; k < Pro->count; k++) {
+        switch (i) {
+            case 0:
+                s += Pro->dat[k].price; 
+                os_print_file(f, "%*d %s\n", Pro->MaxP, Pro->dat[k].price, STU(Pro->dat[k].name)); 
                 break;
-        case 1: for (int i = 0; i < Pro->count; i++) if (Pro->dat[i].qy > 0) { s += Pro->dat[i].price * Pro->dat[i].qy;
-                                                          os_print_file(f, "%02d %2d %*d %s\n", j++, Pro->dat[i].qy, Pro->MaxP, Pro->dat[i].price, STU(Pro->dat[i].name)); }
-                if (s) os_print_file(f, "  %d\n", s);
+            case 1:
+                if (Pro->dat[k].qy > 0) { 
+                    s += Pro->dat[k].price * Pro->dat[k].qy;
+                    os_print_file(f, "%02d %2d %*d %s\n", ++j, Pro->dat[k].qy, Pro->MaxP, Pro->dat[k].price, STU(Pro->dat[k].name)); }
                 break;
-        case 2: for (int i = 0; i < Pro->count; i++) if (Pro->dat[i].summa > 0) { s += Pro->dat[i].summa;
-                                                          os_print_file(f, "%*d %*d %*d %s\n", Pro->MaxV, Pro->dat[i].vis,
-                                                          Pro->MaxT, Pro->dat[i].tqy, Pro->MaxS, Pro->dat[i].summa, STU(Pro->dat[i].name)); }
-                if (s) os_print_file(f, "  %d\n", s); }
+            case 2:
+                if (Pro->dat[k].summa > 0) {
+                    s += Pro->dat[k].summa; 
+                    os_print_file(f, "%*d %*d %*d %s\n", 
+                                  Pro->MaxV, Pro->dat[k].vis, Pro->MaxT, Pro->dat[k].tqy, 
+                                  Pro->MaxS, Pro->dat[k].summa, STU(Pro->dat[k].name)); }
+                break; } }
+    os_print_file(f, "%d\n", s); // Вывод контрольной суммы
     os_close_file(f); }
+
     
 int PrintDic(Dic* Pro) {
     int count = 0;
-    for (int i = 0; i < Pro->count; i++) { if (Pro->dat[i].qy < 1) continue;
-        count++; if (Pro->dat[i].qy > 1) printf(Cnn "%02d " Cnu "%2d ", count, Pro->dat[i].qy);
-                 else printf(Cnn "%02d    ", count);
-        printf( Cnu "%*d " Cna "%-*s\n", Pro->MaxP, Pro->dat[i].price, Pro->MaxN + Pro->dat[i].FCN, Pro->dat[i].name); }
+    for (int i = 0; i < Pro->count; i++) { 
+        if (Pro->dat[i].qy < 1) continue;
+        printf(Cnn "%02d ", ++count);
+        if (Pro->dat[i].qy > 1) printf(Cnu "%2d ", Pro->dat[i].qy);
+        else printf("   ");
+        printf(Cnu "%*d " Cna "%-*s\n", 
+               Pro->MaxP, Pro->dat[i].price, 
+               Pro->MaxN + Pro->dat[i].FCN, Pro->dat[i].name); }
     return count; }
- 
+
+void Analitics(Dic* Pro) {
+    if (!Pro || Pro->count <= 0) return;
+    int i, j, total_S = 0, total_Q = 0, today_S = 0;
+    for (i = 0; i < Pro->count; i++) {
+        total_S += Pro->dat[i].summa;
+        total_Q += Pro->dat[i].tqy;
+        today_S += Pro->dat[i].price * Pro->dat[i].tqy; }
+    if (!total_S || !total_Q) return;
+    int *idx = (int*)os_malloc(Pro->count * sizeof(int));
+    for (i = 0; i < Pro->count; i++) idx[i] = i;
+    for (i = 0; i < Pro->count - 1; i++)
+        for (j = i + 1; j < Pro->count; j++)
+            if (Pro->dat[idx[i]].summa < Pro->dat[idx[j]].summa) {
+                int t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
+    printf(Cls Cna "## %-*s " Cnu "%*s " Cnu "%%🔥 " Cnu "%%💰 " Cnu "🏁 " Cnu "%*s\n",
+           Pro->MaxN + 2, "📦", Pro->MaxP, " 💸", Pro->MaxT, "∑");
+    for (i = 0; i < Pro->count; i++) {
+        int k = idx[i];
+        if (Pro->dat[k].vis == 0) continue;
+        int avg = Pro->dat[k].summa / Pro->dat[k].tqy;
+        int freq = (Pro->dat[k].tqy * 100) / total_Q;
+        int share = (Pro->dat[k].summa * 100) / total_S;
+        const char* trend = (Pro->dat[k].price > avg) ? Cam "🚩" : (Pro->dat[k].price < avg) ? Cap "🟢" : Cna "🏳️ ";
+        const char* hit = (freq > 25) ? Cap "💎" : (freq < 5) ? Cam "🐌" : "  ";
+        printf(Cnn "%02d " Cna "%-*s " Cnu "%*d " Cna "%2d%% " Cnu "%2d%% " "%s " Cnu "%*d %s\n",
+               i + 1, Pro->MaxN + Pro->dat[k].FCN, Pro->dat[k].name,
+               Pro->MaxP, avg, freq, share, trend, Pro->MaxT, Pro->dat[k].tqy, hit); }
+    int infl = ((today_S - total_S) * 100) / total_S;
+    printf(Cna "\n🏦 " Cnu "🛒%d " Cna "💳" Cap "%d\n", total_Q, total_S);
+    printf(Cnu "🧐 " "%s%s " Cnu "%d (" "%s%+d%%" Cnu ")\n", 
+           (infl > 0) ? Cam "📈" : Cap "📉", (infl > 0) ? "😱" : "😎", today_S, 
+           (infl > 0) ? Cam : Cap, infl);
+    os_free(idx);
+    while (1) {
+        delay_ms(60);
+        const char* k = GetKey();
+        if (k[0] == 27 && k[1] == K_DOW) break; } }
+
 int Fpi(Dic* Pro, const char *s, int *i) {
     if (!Pro || Pro->count <= 0) { if (i) *i = -1; return 0; }
     if (!s || *s == '\0') { if (i) *i = 0; return Pro->count; }
@@ -214,156 +269,111 @@ int Fpi(Dic* Pro, const char *s, int *i) {
     return (last - first + 1); }
         
 char* prw(Dic* Pro, const char *str1, int i) {
-    static char res[256];
-    if (i < 0 || i >= Pro->count) { sprintf(res, Cna "%s                    ", str1); return res; }
-    const char *full_name = Pro->dat[i].name;
-    int off = StrLenB(str1);
-    sprintf(res, Cna "%s" Cnn "%s                         ", str1, full_name + off); return res; }
+    char *res = (char*)(FileBuf + NBuf);
+    int b1, c1, b2, c2, sp;
+    b1 = StringBC(str1, &c1);
+    if (i < 0 || i >= Pro->count) { sp = Pro->MaxN + b1 - c1; sprintf(res, Cna "%-*s", sp, str1); }
+    else { const char *full_name = Pro->dat[i].name;
+           b2 = StringBC(full_name, &c2); sp = Pro->MaxN + b2 - c2; sprintf(res, Cna "%s" Cnn "%-*s", str1, sp - b1, full_name + b1); }
+    return res; }
     
-char* GetRow(Dic* Pro,int num, int price, int col, const char *name) {
-    static char buffers[4][256];
-    static int b_idx = 0; 
-    b_idx = (b_idx + 1) & 3;
-    char *d = buffers[b_idx]; 
-    int c; 
-    int b = StringBC(name, &c);
-    int name_w = Pro->MaxN + (b - c);
-    sprintf(d, Cnn "%02d " Cnu "%2d " Cnu "%*d " Cna "%-*s", num, col, Pro->MaxP, price, name_w, name );
-    return d; }
-
-void Analitics(Dic* Pro) {
-    int total_all_sum = 0;
-    int total_items_bought = 0;
-    for (int i = 0; i < Pro->count; i++) {
-        if (Pro->dat[i].tqy <= 0) continue;
-        total_all_sum += Pro->dat[i].summa;
-        total_items_bought += Pro->dat[i].tqy; }
-    if (total_all_sum == 0 || total_items_bought == 0) return;
-    // Обновленный заголовок с новой колонкой (кол-во)
-    printf( Cls Cna "%-*s " Cnu "%*s " Cnu "%*s " Cnu "%*s " Cnu "📊 " Cnu "%*s\n",
-           Pro->MaxN + 5, "📦", 
-           Pro->MaxP, " 💸",
-           Pro->MaxT, " 💱 ",
-           Pro->MaxV, "🎯 ",
-           Pro->MaxT, " ∑ ");             
-    int j=1;
-    for (int i = 0; i < Pro->count; i++) {
-        if (Pro->dat[i].vis == 0) continue;
-        int avg_price = Pro->dat[i].summa / Pro->dat[i].tqy;
-        int frequency = (Pro->dat[i].tqy * 100) / (total_items_bought ? total_items_bought : 1);
-        int share = (Pro->dat[i].summa * 100) / (total_all_sum ? total_all_sum : 1);
-        const char* color = (frequency > 30) ? Cap : (frequency < 10 ? Cam : Cna);
-        const char* price_status_symbol = "";
-        const char* price_status_color = Cna;
-        if (Pro->dat[i].price > avg_price) {
-            price_status_symbol = "🚩  ";
-            price_status_color = Cam; } 
-        else if (Pro->dat[i].price < avg_price) {
-                  price_status_symbol = "🟢  ";
-                  price_status_color = Cap; } 
-              else price_status_symbol = "🏳️   ";
-        printf(Cnn "%02d " "%s%-*s " Cnu "%*d " "%s%3d%% " Cnu "%2d%% " "%s%s" Cnu "%*d\n",
-               j++, color, Pro->MaxN + Pro->dat[i].FCN, Pro->dat[i].name,
-               Pro->MaxP, avg_price,
-               color, frequency, share,
-               price_status_color, price_status_symbol,
-               Pro->MaxT, Pro->dat[i].tqy); }
-    int total_if_today = 0;
-    for (int i = 0; i < Pro->count; i++) {
-        if (Pro->dat[i].tqy == 0) continue;
-        total_if_today += Pro->dat[i].price * Pro->dat[i].tqy; }
-    int avg_item_price = total_all_sum / (total_items_bought ? total_items_bought : 1);
-    printf(Cna "🏦\n");
-    printf(Cnu "🧾💰 : " Cap "%d\n", avg_item_price);
-    printf(Cnu "🛍️  ∑ : " Cap "%d\n", total_items_bought);
-    printf(Cnu "💳 ∑ : " Cap "%d\n", total_all_sum); 
-    int inflation_percent = 0;
-    if (total_if_today > 0 && total_all_sum > 0) {
-        inflation_percent = ((total_if_today - total_all_sum) * 100) / total_all_sum;
-        const char* infla_color = (inflation_percent > 0) ? Cam : Cap;
-        const char* trend_emoji = (inflation_percent > 0) ? "📈" : "📉"; 
-        printf(Cnu "%s 🧐: " Cnu "%d (" "%s%+d%%" Cnu ")\n", 
-               trend_emoji, total_if_today, infla_color, inflation_percent); }
-    while (1) { 
-        UIDelay(200);
-        const char* k = GetKeyName();
-        if (k && strcmp(k, "Down") == 0) break; } }
-
-void EditDic(Dic* Pro) { 
-    int b,i,cr,cl,pl,sum,Pleft,Pnum,nprice,num, ncol = -1;
-    char input[129] = {0};
+typedef struct { char name[BufN+1]; int len,price,lp,col; } IN_t;
+IN_t IN;
+void Products(Dic* Pro) { 
+    int i,tmp,type,b = 0,cr = 0,Pleft = 0,Pnum = 0,num = 0;
+    IN.col = -1;
+    SetInputMode(1); printf(HCur); tmp = LoadDic(Pro, DBase); tmp = LoadDic(Pro, DAn); tmp = LoadDic(Pro, DRep);
     while (1) {
-        if (ncol == -1) { sum = 0; Pleft = 0; Pnum = 0; nprice = 0; ncol = 1; input[0] = '\0'; num = -1; kpr = 0;
-                          if (!Pro || Pro->count < 1) { i = -1; b = 0; }
-                          else { i = 0; b = Pro->count; }
-                          cr=i; }
-        if (num == -1) { printf( Cls Cna ); num = 1 + PrintDic(Pro); printf(SCur); }
-        cl = StrLen(input); if (cl > Pro->MaxN) Pro->MaxN = cl;
-        if (cr!=-1) { if (sum==0) nprice=Pro->dat[cr].price;
-                      else nprice=sum; }
-        printf(LCur "%s",GetRow(Pro,num,nprice,ncol,prw(Pro,input,cr))); fflush(stdout);
-        UIDelay(b == 0?100:(b == 1?80:60));
-        const char *raw_key = GetKeyName();
-        char key_buf[64] = {0};
-        if (raw_key && *raw_key) { strncpy(key_buf, raw_key, 63); char *key = key_buf;
-            if (strcmp(key, "Space") == 0) { key[0] = ' '; key[1] = '\0'; }
-            if (strcmp(key, "Enter") == 0) { if (kpr > 0 && nprice!=0) {
-                                                if (b > 0) { b = Fpi(Pro,input,&i); cr = i; strcpy(input, Pro->dat[i].name); }
-                                                else cr = -1;
-                                                cl = StrLen(input); if (cl < 33 && cl > Pro->MaxN) Pro->MaxN = cl;
-                                                printf(LCur "%s",GetRow(Pro,num,nprice,ncol,input)); fflush(stdout);
-                                                if (cr == -1) { if (AddDic(Pro, input, nprice, ncol) == -1) { printf("\n🚩\n"); fflush(stdout); UIDelay(1500); }
-                                                                ncol = -1; continue; }
-                                                else { if (ncol == 0) Pro->dat[cr].qy = 0;
-                                                       else { ncol = Pro->dat[cr].qy + ncol; Pro->dat[cr].qy = (ncol > 99) ? 99 : ncol; }
-                                                       Pro->dat[cr].price = nprice; }
-                                                ncol = -1; }
-                                              continue; }
-            if (strcmp(key, "Up") == 0) { Analitics(Pro); num = -1; continue; }
-            if (strcmp(key, "Escape") == 0) { printf(LCur Cce); fflush(stdout); return; }
-            if (strcmp(key, "Backspace") == 0 || strcmp(key, "Delete") == 0) {
-                if (kpr>0) { kpr--; input[LH[kpr]]='\0'; b = Fpi(Pro,input,&i); cr=i; }
-                else sum=0;
+        if (IN.col == -1) { 
+            Pleft = 0; Pnum = 0; IN.col = 1; IN.lp = 0; IN.len = 0; IN.price = 0; IN.name[0] = '\0'; num = -1; kpr = 0;
+            if (!Pro || Pro->count < 1) { i = -1; b = 0; }
+            else { i = 0; b = Pro->count; }
+            cr=i; }
+        if (num == -1) {
+            printf( Cls Cna ); num = 1 + PrintDic(Pro); printf(SCur); }
+        if (cr!=-1) { if (IN.lp == 0) IN.price=Pro->dat[cr].price; }
+        printf(LCur Cnn "%02d " Cnu "%2d " Cnu "%*d " Cna "%s", num, IN.col, Pro->MaxP, IN.price, prw(Pro, IN.name, cr)); fflush(stdout);
+        delay_ms(120);
+        const char *key = GetKey();
+        if (key[0] == 27 && key[1] == 0) { 
+            if (b > 0) {
+                cr = (cr == -1) ? b : (cr - i);
+                cr = (cr + 1) % (b + 1);
+                if (cr == b) cr = -1;
+                else cr += i; }
+            else cr = -1;
+        continue; }
+        if (key[0] != 27) { 
+                if ((type=CharType((unsigned char*)key,&tmp))==1) {
+                    if (Pleft ) {
+                        IN.col=key[0]-'0'; Pleft=0; Pnum=0; }
+                    else { 
+                        if (Pnum==0) { IN.price=0; IN.lp = 0; }
+                        if (IN.lp < 6) { IN.price = IN.price * 10 + key[0] - '0'; IN.lp++; }
+                        Pnum=1; } }
+                else { 
+                    if (type != 2) continue;
+                    Pleft=0; Pnum=0;
+                    if (IN.len < Mname) { 
+                        LH[kpr++] = StrLenB(IN.name); strcat(IN.name, key);
+                        b = Fpi(Pro,IN.name,&i); cr=i; IN.len++; } }
                 continue; }
-            if (strcmp(key, "Left") == 0) { Pleft=1; continue; }
-            if (strcmp(key, "Right") == 0 || strcmp(key, "Tab") == 0) { 
-                if (b > 0 && i >= 0 && i < Pro->count) {
-                    if (strcmp(input, Pro->dat[i].name) == 0 && b > 1) { i++; b--; }
-                    const char *fna = Pro->dat[i].name;
-                    int cub = StrLenB(input);
-                    int tb = StrLenB(fna);
-                    if (tb > cub) { if (kpr < 128) LH[kpr++] = cub;
-                        strcpy(input + cub, fna + cub);
-                        b = Fpi(Pro,input, &i);
-                        cr = i; } }
-                continue; }
-            if (StrLen(key) == 1) {
-                if (key[0]>='0' && key[0]<='9') { if (Pleft ) { ncol=key[0]-'0'; Pleft=0; Pnum=0; } 
-                                                  else { if (Pnum==0) sum=0;
-                                                          pl = 1; for (Pnum = sum; Pnum > 9 ; Pnum /= 10, pl++);
-                                                          if (pl < 6) sum = sum * 10 + key[0] - '0';
-                                                          if (Pro->MaxP < pl) Pro->MaxP = pl; 
-                                                          nprice=sum; Pnum=1; }
-                                                  continue; }
-                else { Pleft=0; Pnum=0; if (StrLenB(input)+ StrLenB(key) < 128) { LH[kpr++] = StrLenB(input); strcat(input, key);
-                                                                                  b = Fpi(Pro,input,&i); cr=i; } } } }
-        if (b <= 0) cr = -1;
-        else { cr = (cr - i + 1) % b; if (cr < 0) cr += b;
-               cr += i; } } }
+        else { switch (key[1]) {
+                case K_SPA: if (IN.len == 0) continue; 
+                            if (IN.name[StrLenB(IN.name) - 1] == ' ')  continue;
+                            if (IN.len < Mname) {
+                                strcat(IN.name, " "); IN.len++; LH[kpr++] = StrLenB(IN.name); b = Fpi(Pro, IN.name, &i); cr = i; }
+                            continue;
+                case K_ENT: if (IN.len && IN.price) {
+                                if (b > 0) { 
+                                    b = Fpi(Pro,IN.name,&i); strcpy(IN.name, Pro->dat[i].name); cr = i; }
+                                else { 
+                                    if (IN.name[StrLenB(IN.name) - 1] == 32) IN.len--;
+                                    IN.name[StrLenB(IN.name)] = 0; cr = -1; }
+                                if (cr == -1) { 
+                                    if (AddDic(Pro, IN.name, IN.price, IN.col) == -1) { 
+                                        printf("\n🚩\n"); fflush(stdout); delay_ms(1500); IN.col = -1; continue; }
+                                    if (IN.len > Pro->MaxN) Pro->MaxN = IN.len;
+                                    if (IN.lp > Pro->MaxP) Pro->MaxP = IN.lp; }
+                                else { 
+                                    if (IN.col == 0) Pro->dat[cr].qy = 0;
+                                    else {
+                                        IN.col = Pro->dat[cr].qy + IN.col; Pro->dat[cr].qy = (IN.col > 99) ? 99 : IN.col; }
+                                    if (IN.len < Mname+1 && IN.len > Pro->MaxN) Pro->MaxN = IN.len;
+                                    if (IN.lp > Pro->MaxP) Pro->MaxP = IN.lp;
+                                    Pro->dat[cr].price = IN.price; }
+                                IN.col = -1; }
+                            continue;
+                 case K_UP: Analitics(Pro); num = -1; continue;
+                case K_ESC: printf(LCur Cce); fflush(stdout); SaveDic(Pro, DBase); SaveDic(Pro,DAn); SaveDic(Pro,DRep); tmp = 0; 
+                            for (int i = 0; i < Pro->count; i++) if (Pro->dat[i].qy > 0) tmp += Pro->dat[i].price * Pro->dat[i].qy;
+                            if (tmp) { printf(Cnu "%d", tmp); fflush(stdout); }
+                            SetInputMode(0); printf(ShCur); ClearDic(Pro); return;
+                case K_BAC:
+                case K_DEL: if (Pnum) { 
+                                if (IN.lp) { IN.price /= 10; IN.lp--; }
+                                continue; }
+                            if (kpr > 0) {
+                                kpr--; IN.name[LH[kpr]]='\0'; IN.len = StrLen(IN.name); b = Fpi(Pro,IN.name,&i); cr=i; }
+                            continue;
+                case K_LEF: Pleft = 1; continue;
+                case K_RIG:
+                case K_TAB: if (IN.len > 0) {
+                                if (b > 0 && i >= 0 && i < Pro->count) {
+                                    if (strcmp(IN.name, Pro->dat[i].name) == 0 && b > 1) { i++; b--; }
+                                    const char *fna = Pro->dat[i].name; int cub = StrLenB(IN.name); int tb = StrLenB(fna);
+                                if (tb > cub) {
+                                    if (kpr < Mname) {
+                                        LH[kpr++] = cub; strcpy(IN.name + cub, fna + cub); IN.len = StrLen(IN.name); b = Fpi(Pro,IN.name, &i); cr = i; } } } }
+                   default: continue; } } } }
 
-void Products(void) {
-    Dic Pro = {0}; int opt;
-    SetInputMode(1); printf(HCur); opt = LoadDic(&Pro, DBase); opt = LoadDic(&Pro, DAn); opt = LoadDic(&Pro, DRep);
-    EditDic(&Pro); SaveDic(&Pro, DBase); SaveDic(&Pro,DAn); SaveDic(&Pro,DRep); opt = 0; 
-    for (int i = 0; i < Pro.count; i++) if (Pro.dat[i].qy > 0) opt += Pro.dat[i].price * Pro.dat[i].qy;
-    if (opt) { printf(Cnu "%d", opt); fflush(stdout); }
-    SetInputMode(0); printf(ShCur); ClearDic(&Pro); }
-    
 void help() {
     printf(Cnn "Created by " Cna "Alexey Pozdnyakov" Cnn " in " Cna "01.2026" Cnn 
            " version " Cna "1.02" Cnn ", email " Cna "avp70ru@mail.ru" Cnn 
            " github " Cna "https://github.com/AVPscan" Cnn "\n"); }
 
 int main(int argc, char *argv[]) {
-    if (argc > 1) if (strcmp(argv[1], "-?") == 0 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-help") == 0) { help(); return 0; }
-    SWD(); Products(); return 0; }
+    if (argc > 1) { if (strcmp(argv[1], "-?") == 0 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-help") == 0) help();
+                    return 0; }
+    Dic Pro = {0};
+    SWD(); Products(&Pro); return 0; }

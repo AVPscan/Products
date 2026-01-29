@@ -43,6 +43,12 @@
 #define DBuf 4096
 #define NBuf 1024
 
+enum {
+    K_ESC = 1, K_UP, K_DOW, K_RIG, K_LEF, 
+    K_HOM, K_END, K_PUP, K_PDN, K_INS, K_DEL,
+    K_F1, K_F2, K_F3, K_F4, K_F5, K_F6, K_F7, K_F8, K_F9, K_F10, K_F11, K_F12,
+    K_SPA, K_BAC, K_ENT, K_TAB, K_CRC };
+    
 /* --- Файловые операции --- */
 void* os_open_file(const char* name);
 void* os_create_file(const char* name);
@@ -66,11 +72,9 @@ char* os_strdup(const char* s);
 
 /* --- Время и Задержки --- */
 void  delay_ms(int ms);
-void  CalibrateUIDelay(void);
-void  UIDelay(int base_ms);
 
 /* --- Ввод и Клавиатура --- */
 void  SetInputMode(int raw);
-const char* GetKeyName(void);
+const char* GetKey(void);
 
 #endif /* SYS_H */

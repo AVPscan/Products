@@ -2,105 +2,82 @@ CC ?= gcc
 TARGET = products
 SOURCES = products.c sys_linux.c
 
-# Флаги для минимального размера
-CFLAGS_TINY = -std=c11 -Os -DNDEBUG -Wall -Wextra \
-              -D_POSIX_C_SOURCE=200809L \
+# Базовые флаги
+BASE_CFLAGS = -std=c11 -Os -DNDEBUG -Wall -Wextra -D_POSIX_C_SOURCE=200809L
+BASE_LDFLAGS = -flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none
+
+# Флаги для tiny версии
+CFLAGS_TINY = $(BASE_CFLAGS) \
               -ffunction-sections -fdata-sections \
-              -fno-stack-protector -fomit-frame-pointer \
               -fno-unwind-tables -fno-asynchronous-unwind-tables \
-              -fno-ident
+              -fno-ident -fomit-frame-pointer
 
-LDFLAGS_TINY = -Wl,--gc-sections -Wl,--strip-all -Wl,-s \
-               -Wl,--build-id=none -Wl,-z,norelro -Wl,-z,max-page-size=4096
+LDFLAGS_TINY = $(BASE_LDFLAGS) \
+               -Wl,-z,pack-relative-relocs
 
-.PHONY: all tiny clean run size analyze help
+.PHONY: all tiny clean run size analyze help g c
 
-# По умолчанию - попытка достичь 27KB
 all: tiny
 
-# Основная цель - 27KB
 tiny: $(SOURCES)
-	@echo "🎯 Цель: 27KB бинарник с nanosleep..."
+	@echo "🎯 Цель: минимальный бинарник..."
 	$(CC) $(CFLAGS_TINY) -o $(TARGET) $(SOURCES) $(LDFLAGS_TINY)
-	@# Дополнительный стрип
+	@# Дополнительный strip на всякий случай
 	@strip --strip-all --remove-section=.note.gnu.build-id \
+	       --remove-section=.note.ABI-tag \
 	       --remove-section=.comment $(TARGET) 2>/dev/null || true
 	@$(MAKE) --no-print-directory size
 
-# Альтернатива без nanosleep для сравнения
-original: CFLAGS_TINY = -std=c11 -Os -DNDEBUG -Wall -Wextra \
-                        -ffunction-sections -fdata-sections \
-                        -fno-stack-protector -fomit-frame-pointer
-original: LDFLAGS_TINY = -Wl,--gc-sections -Wl,--strip-all -Wl,-s
-original: $(SOURCES)
-	@echo "🔄 Сборка с оригинальной delay_ms (без nanosleep)..."
-	$(CC) $(CFLAGS_TINY) -o $(TARGET) $(SOURCES) $(LDFLAGS_TINY)
-	@strip --strip-all $(TARGET) 2>/dev/null || true
-	@$(MAKE) --no-print-directory size
-
-# Показать размер
-size:
-	@SIZE=$$(stat -c%s $(TARGET) 2>/dev/null || wc -c < $(TARGET)); \
-	echo "📏 Размер: $$SIZE байт"; \
-	if [ $$SIZE -le 28000 ]; then \
-	    if [ $$SIZE -le 27000 ]; then \
-	        echo "✅ ЦЕЛЬ ДОСТИГНУТА: ≤27KB!"; \
-	    else \
-	        echo "⚠️  Близко: $$((SIZE - 27000)) байт сверху"; \
-	    fi; \
-	else \
-	    echo "❌ Большой: $$((SIZE - 27000)) байт лишних"; \
-	fi
-
-# Анализ
-analyze: $(TARGET)
-	@echo "🔍 Анализ бинарника..."
-	@echo "1. Размер:"
-	@ls -lh $(TARGET) | awk '{print "   "$$5" ("$$9")"}'
-	@echo ""
-	@echo "2. Зависимости:"
-	@ldd $(TARGET) 2>/dev/null || echo "   (статический или ошибка)"
-	@echo ""
-	@echo "3. Секции:"
-	@size $(TARGET) 2>/dev/null || echo "   (size не доступен)"
-
-# Разные компиляторы // c: CFLAGS_TINY  += -Oz -flto -fvisibility=hidden
+# Специально для GCC
 g: CC = gcc
 g: tiny
 
+# Специально для Clang (используем -Oz для максимального сжатия)
 c: CC = clang
+c: CFLAGS_TINY += -Oz -fno-stack-protector -fno-unwind-tables
 c: tiny
 
-# Очистка
+
+# Для сравнения - обычная сборка
+normal:
+	@echo "🔨 Обычная сборка..."
+	$(CC) $(BASE_CFLAGS) -o $(TARGET) $(SOURCES)
+	@$(MAKE) --no-print-directory size
+
+size:
+	@SIZE=$$(stat -c%s $(TARGET) 2>/dev/null || wc -c < $(TARGET)); \
+	echo "📏 Размер: $$SIZE байт"; \
+	TARGET_SIZE=27000; \
+	if [ $$SIZE -le $$TARGET_SIZE ]; then \
+	    echo "✅ мы сделали это однако"; \
+	else \
+	    echo "⚠️  Размер: $$SIZE байт (превышение на $$((SIZE - TARGET_SIZE)))"; \
+	fi
+
+$(TARGET): $(SOURCES)
+	$(MAKE) tiny
+analyze: $(TARGET)
+	@echo "🔍 Анализ секций:"
+	@size $(TARGET)
+	@echo "🔍 Подробно:"
+	@size -A $(TARGET) 2>/dev/null || echo "size -A не поддерживается"
+	@echo "🔍 Динамические зависимости:"
+	@ldd $(TARGET) 2>/dev/null || echo "Статически слинкован"
+
 clean:
 	rm -f $(TARGET) *.o
 	@echo "🧹 Очищено"
 
-# Запуск
 run: tiny
-	@echo "🚀 Запуск программы..."
-	@echo "========================"
 	./$(TARGET)
 
-# Тест скорости
-bench: tiny
-	@echo "⏱️  Тест скорости..."
-	@time ./$(TARGET) --help 2>/dev/null || echo "   (без --help опции)"
-	@echo "   Запуск теста завершен"
-
-# Справка
 help:
-	@echo "=== Makefile для продуктов ==="
-	@echo "Команды для достижения 27KB:"
-	@echo "  make           - Сборка с nanosleep (цель 27KB)"
-	@echo "  make original  - Сборка без nanosleep (сравнение)"
-	@echo "  make size      - Показать размер"
-	@echo "  make analyze   - Анализ бинарника"
-	@echo "  make g		- Собрать с GCC"
-	@echo "  make c		- Собрать с Clang"
-	@echo "  make clean     - Очистка"
-	@echo "  make run       - Собрать и запустить"
-	@echo "  make bench     - Тест скорости"
-	@echo ""
-	@echo "Текущий компилятор: $(CC)"
-
+	@echo "Доступные цели:"
+	@echo "  make tiny   - минимальная сборка (по умолчанию)"
+	@echo "  make g      - tiny сборка через gcc"
+	@echo "  make c      - tiny сборка через clang с -Oz"
+	@echo "  make normal - обычная сборка для сравнения"
+	@echo "  make size   - показать размер бинарника"
+	@echo "  make analyze- анализ секций и зависимостей"
+	@echo "  make clean  - очистка"
+	@echo "  make run    - собрать и запустить"
