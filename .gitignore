@@ -3,6 +3,7 @@
 
 # Но разрешить эти типы файлов
 !DONATIONS.md
+!sys_windows.c
 !sys_linux.c
 !sys.h
 !products.c

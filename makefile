@@ -1,10 +1,29 @@
 CC ?= gcc
 TARGET = products
-SOURCES = products.c sys_linux.c
+# Определяем ОС: Windows_NT — это стандартная переменная окружения в Win
+ifeq ($(OS),Windows_NT)
+    SYS_SRC = sys_windows.c
+    EXT = .exe
+    # Библиотеки для WinAPI
+    LIBS = -lkernel32 -luser32
+    # В Windows stat -c%s не работает, используем wc
+    GET_SIZE = wc -c < $(TARGET)$(EXT)
+else
+    SYS_SRC = sys_linux.c
+    EXT =
+    LIBS =
+    GET_SIZE = stat -c%s $(TARGET)$(EXT)
+endif
+
+SOURCES = products.c $(SYS_SRC)
 
 # Базовые флаги
-BASE_CFLAGS = -std=c11 -Os -DNDEBUG -Wall -Wextra -D_POSIX_C_SOURCE=200809L
-BASE_LDFLAGS = -flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none
+BASE_CFLAGS = -std=c11 -Os -DNDEBUG -Wall -Wextra
+ifndef ($(OS),Windows_NT)
+    BASE_CFLAGS += -D_POSIX_C_SOURCE=200809L
+endif
+
+BASE_LDFLAGS = -flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none $(LIBS)
 
 # Флаги для tiny версии
 CFLAGS_TINY = $(BASE_CFLAGS) \
@@ -12,72 +31,51 @@ CFLAGS_TINY = $(BASE_CFLAGS) \
               -fno-unwind-tables -fno-asynchronous-unwind-tables \
               -fno-ident -fomit-frame-pointer
 
-LDFLAGS_TINY = $(BASE_LDFLAGS) \
-               -Wl,-z,pack-relative-relocs
+LDFLAGS_TINY = $(BASE_LDFLAGS)
+ifneq ($(OS),Windows_NT)
+    LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
+endif
 
 .PHONY: all tiny clean run size analyze help g c
 
 all: tiny
 
 tiny: $(SOURCES)
-	@echo "🎯 Цель: минимальный бинарник..."
-	$(CC) $(CFLAGS_TINY) -o $(TARGET) $(SOURCES) $(LDFLAGS_TINY)
-	@# Дополнительный strip на всякий случай
-	@strip --strip-all --remove-section=.note.gnu.build-id \
-	       --remove-section=.note.ABI-tag \
-	       --remove-section=.comment $(TARGET) 2>/dev/null || true
+	@echo "🎯 Цель: минимальный бинарник ($(SYS_SRC))..."
+	$(CC) $(CFLAGS_TINY) -o $(TARGET)$(EXT) $(SOURCES) $(LDFLAGS_TINY)
+	@# Strip для Linux (в Windows gcc делает это сам при -s)
+	@if [ "$(OS)" != "Windows_NT" ]; then \
+	    strip --strip-all --remove-section=.note.gnu.build-id \
+	          --remove-section=.note.ABI-tag \
+	          --remove-section=.comment $(TARGET)$(EXT) 2>/dev/null || true; \
+	fi
 	@$(MAKE) --no-print-directory size
 
-# Специально для GCC
 g: CC = gcc
 g: tiny
 
-# Специально для Clang (используем -Oz для максимального сжатия)
 c: CC = clang
-c: CFLAGS_TINY += -Oz -fno-stack-protector -fno-unwind-tables
+c: CFLAGS_TINY += -Oz -fno-stack-protector
 c: tiny
 
-
-# Для сравнения - обычная сборка
-normal:
-	@echo "🔨 Обычная сборка..."
-	$(CC) $(BASE_CFLAGS) -o $(TARGET) $(SOURCES)
-	@$(MAKE) --no-print-directory size
-
 size:
-	@SIZE=$$(stat -c%s $(TARGET) 2>/dev/null || wc -c < $(TARGET)); \
+	@SIZE=$$($(GET_SIZE) 2>/dev/null || echo 0); \
 	echo "📏 Размер: $$SIZE байт"; \
 	TARGET_SIZE=27000; \
-	if [ $$SIZE -le $$TARGET_SIZE ]; then \
+	if [ $$SIZE -le $$TARGET_SIZE ] && [ $$SIZE -gt 0 ]; then \
 	    echo "✅ мы сделали это однако"; \
-	else \
+	elif [ $$SIZE -gt 0 ]; then \
 	    echo "⚠️  Размер: $$SIZE байт (превышение на $$((SIZE - TARGET_SIZE)))"; \
 	fi
 
-$(TARGET): $(SOURCES)
-	$(MAKE) tiny
-analyze: $(TARGET)
-	@echo "🔍 Анализ секций:"
-	@size $(TARGET)
-	@echo "🔍 Подробно:"
-	@size -A $(TARGET) 2>/dev/null || echo "size -A не поддерживается"
-	@echo "🔍 Динамические зависимости:"
-	@ldd $(TARGET) 2>/dev/null || echo "Статически слинкован"
-
 clean:
-	rm -f $(TARGET) *.o
+	rm -f $(TARGET) $(TARGET).exe *.o
 	@echo "🧹 Очищено"
 
 run: tiny
-	./$(TARGET)
+	./$(TARGET)$(EXT)
 
 help:
-	@echo "Доступные цели:"
-	@echo "  make tiny   - минимальная сборка (по умолчанию)"
-	@echo "  make g      - tiny сборка через gcc"
-	@echo "  make c      - tiny сборка через clang с -Oz"
-	@echo "  make normal - обычная сборка для сравнения"
-	@echo "  make size   - показать размер бинарника"
-	@echo "  make analyze- анализ секций и зависимостей"
-	@echo "  make clean  - очистка"
-	@echo "  make run    - собрать и запустить"
+	@echo "ОС: $(OS) (Файл: $(SYS_SRC))"
+	@echo "Доступные цели: tiny, g, c, clean, run"
+
