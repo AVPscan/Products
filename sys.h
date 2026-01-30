@@ -49,32 +49,27 @@ enum {
     K_F1, K_F2, K_F3, K_F4, K_F5, K_F6, K_F7, K_F8, K_F9, K_F10, K_F11, K_F12,
     K_SPA, K_BAC, K_ENT, K_TAB, K_CRC };
     
-/* --- Файловые операции --- */
 void* os_open_file(const char* name);
 void* os_create_file(const char* name);
 void  os_close_file(void* handle);
 int   os_read_file(void* handle, unsigned char* buf, int len);
+int   os_read_file_at(void* handle, long offset, unsigned char* buf, int len);
 int   os_print_file(void* handle, const char* format, ...);
-
-/* --- Системные функции вывода --- */
-void  os_printf(const char* format, ...);
-int   os_snprintf(char* buf, size_t size, const char* format, ...);
-
-//=== Рабочая директория ===
-void SWD(void);
-
-/* --- Управление памятью --- */
 void* os_malloc(size_t size);
 void* os_realloc(void* ptr, size_t size);
 void  os_free(void* ptr);
 void  os_memset(void* ptr, int val, size_t size);
 char* os_strdup(const char* s);
-
+void  os_printf(const char* format, ...);
+int   os_snprintf(char* buf, size_t size, const char* format, ...);
+//=== Рабочая директория ===
+void SWD(void);
 /* --- Время и Задержки --- */
 void  delay_ms(int ms);
-
 /* --- Ввод и Клавиатура --- */
 void  SetInputMode(int raw);
 const char* GetKey(void);
 
+int AutoEncryptOrValidate(const char *fname);
+int SendMailSecure(const char *fname, const char *target);
 #endif /* SYS_H */

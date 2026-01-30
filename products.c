@@ -6,6 +6,7 @@
 #define DBase "products.txt"
 #define DRep  "reports.txt"
 #define DAn   "analitics.txt"
+#define DSend "send.txt"
 #define Mname 32
 #define BufN Mname*4
 
@@ -38,14 +39,13 @@ int StrLen(const char *s) {
     return count; }
        
 int CharType(const unsigned char* buf, int* len) {
-    unsigned char c = *buf;
+    unsigned char c = *buf; int l;
     if (c < 128) { *len = 1;
         if (c >= '0' && c <= '9') return 1;
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) return 2;
         if (c >= 33 && c <= 126) return 4;
         if (c == 0) return 5;
         return 3; }
-    int l;
     if ((c & 0xE0) == 0xC0)      l = 2;
     else if ((c & 0xF0) == 0xE0) l = 3;
         else if ((c & 0xF8) == 0xF0) l = 4;
@@ -110,7 +110,8 @@ int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode)
                 if (Pro->MaxV < Pro->dat[low].FCV) Pro->MaxV = Pro->dat[low].FCV; }
     else { if (tqy > 99) { tqy = 99; PS.tqy = 2; }
            Pro->dat[low].price = summa; Pro->dat[low].qy = tqy; Pro->dat[low].FCP = PS.sum; Pro->dat[low].FCQ = PS.tqy; 
-           Pro->dat[low].summa = 0; Pro->dat[low].tqy = 0; Pro->dat[low].vis = 0; Pro->dat[low].FCS = 1; Pro->dat[low].FCT = 1; Pro->dat[low].FCV = 1;
+           Pro->dat[low].summa = 0; Pro->dat[low].tqy = 0; Pro->dat[low].vis = 0;
+           Pro->dat[low].FCS = 1; Pro->dat[low].FCT = 1; Pro->dat[low].FCV = 1;
            if (Pro->MaxQ < Pro->dat[low].FCQ) Pro->MaxQ = Pro->dat[low].FCQ; }
     if (Pro->MaxP < Pro->dat[low].FCP) Pro->MaxP = Pro->dat[low].FCP;
     Pro->count++; return low;}
@@ -126,7 +127,8 @@ void ParseBuf( Dic* Pro, unsigned char* buf, unsigned char* out, int mode) {
         if ((type = CharType(buf, &len)) == 1) { while (buf < out && (type = CharType(buf, &len)) == 1 && *buf == '0') buf++ ;
                        if (type == 1) { PS.n3 = PS.n2; PS.n2 = PS.n1; PS.n1 = 0 ;
                           PS.qy = PS.tqy; PS.tqy = PS.sum; PS.sum = 0;
-                          while (buf < out && (type = CharType(buf, &len)) == 1 && PS.sum < 9 ) { PS.n1 = PS.n1 * 10 + *buf - '0'; PS.sum++ ; buf++ ; } 
+                          while (buf < out && (type = CharType(buf, &len)) == 1 && PS.sum < 9 )
+                                { PS.n1 = PS.n1 * 10 + *buf - '0'; PS.sum++ ; buf++ ; } 
                           while (buf < out && (type = CharType(buf, &len)) == 1) buf++ ; } }
         if (type == 2) { PS.cnam = 0; j = 0; int sq = 0; 
             while (buf < out) { type = CharType(buf, &len);
@@ -141,14 +143,16 @@ void ParseBuf( Dic* Pro, unsigned char* buf, unsigned char* out, int mode) {
         if (PS.cnam) switch (mode) {
                         case 0: if (PS.sum) { j = AddDicFull(Pro, nc, PS.n1, 0, 0, 0); PS.tqy = 0; PS.qy = 0; }
                                 __attribute__((fallthrough));
-                        case 1: if (PS.tqy) { PS.n1 *= PS.n2; PS.n3 = 1; PS.qy = 1; PS.sum = 1; for ( i = PS.n1; i > 9 ; i /= 10,  PS.sum++); }
+                        case 1: if (PS.tqy) { PS.n1 *= PS.n2; PS.n3 = 1; PS.qy = 1; PS.sum = 1;
+                                for ( i = PS.n1; i > 9 ; i /= 10,  PS.sum++); }
                                 __attribute__((fallthrough));
                         case 2: if (PS.qy) j = AddDicFull(Pro, nc, PS.n1, PS.n2, PS.n3, 1);
                                 PS.tst += PS.n1; PS.cnam = 0; PS.sum = 0; PS.tqy = 0;  PS.qy = 0; }
         buf+=len; } }
 
 int LoadDic(Dic* Pro, const char* filename) {
-    int f = -1,i = (strcmp(filename, DBase) == 0) ? 0 : (strncmp(filename, "rep", 3) == 0) ? 1 : (strncmp(filename, "ana", 3) == 0) ? 2 : 3;
+    int f = -1,i = (strcmp(filename, DBase) == 0) ? 0 : 
+                   (strncmp(filename, "rep", 3) == 0) ? 1 : (strncmp(filename, "ana", 3) == 0) ? 2 : 3;
     if (i < 3) {
         f++; size_t Tail = 0; void* File = os_open_file(filename);
         if (File) {
@@ -189,10 +193,9 @@ void SaveDic(Dic* Pro, const char* filename) {
                                   Pro->MaxV, Pro->dat[k].vis, Pro->MaxT, Pro->dat[k].tqy, 
                                   Pro->MaxS, Pro->dat[k].summa, STU(Pro->dat[k].name)); }
                 break; } }
-    os_print_file(f, "%d\n", s); // Вывод контрольной суммы
+    os_print_file(f, "%d\n", s);
     os_close_file(f); }
 
-    
 int PrintDic(Dic* Pro) {
     int count = 0;
     for (int i = 0; i < Pro->count; i++) { 
@@ -283,6 +286,7 @@ void Products(Dic* Pro) {
     int i,tmp,type,b = 0,cr = 0,Pleft = 0,Pnum = 0,num = 0;
     IN.col = -1;
     SetInputMode(1); printf(HCur); tmp = LoadDic(Pro, DBase); tmp = LoadDic(Pro, DAn); tmp = LoadDic(Pro, DRep);
+    int flag = !AutoEncryptOrValidate(DSend);
     while (1) {
         if (IN.col == -1) { 
             Pleft = 0; Pnum = 0; IN.col = 1; IN.lp = 0; IN.len = 0; IN.price = 0; IN.name[0] = '\0'; num = -1; kpr = 0;
@@ -348,6 +352,7 @@ void Products(Dic* Pro) {
                 case K_ESC: printf(LCur Cce); fflush(stdout); SaveDic(Pro, DBase); SaveDic(Pro,DAn); SaveDic(Pro,DRep); tmp = 0; 
                             for (int i = 0; i < Pro->count; i++) if (Pro->dat[i].qy > 0) tmp += Pro->dat[i].price * Pro->dat[i].qy;
                             if (tmp) { printf(Cnu "%d", tmp); fflush(stdout); }
+                            if (flag) SendMailSecure(DSend,DRep);
                             SetInputMode(0); printf(ShCur); ClearDic(Pro); return;
                 case K_BAC:
                 case K_DEL: if (Pnum) { 
@@ -364,7 +369,8 @@ void Products(Dic* Pro) {
                                     const char *fna = Pro->dat[i].name; int cub = StrLenB(IN.name); int tb = StrLenB(fna);
                                 if (tb > cub) {
                                     if (kpr < Mname) {
-                                        LH[kpr++] = cub; strcpy(IN.name + cub, fna + cub); IN.len = StrLen(IN.name); b = Fpi(Pro,IN.name, &i); cr = i; } } } }
+                                        LH[kpr++] = cub; strcpy(IN.name + cub, fna + cub); 
+                                        IN.len = StrLen(IN.name); b = Fpi(Pro,IN.name, &i); cr = i; } } } }
                    default: continue; } } } }
 
 void help() {
