@@ -15,10 +15,10 @@ extern unsigned char FileBuf[DBuf+NBuf];
 static int LH[Mname];
 static int kpr = 0;
 
-typedef struct { char* name; int price, qy, summa, tqy, vis, nameC,FCN,FCP,FCQ,FCS,FCT,FCV; } DicDat;
+typedef struct { char* name; int price, qy, summa, tqy, vis, nameC,FCN; } DicDat;
 typedef struct { 
     DicDat* dat; 
-    int cap, count,MaxN,MaxP,MaxQ,MaxS,MaxT,MaxV;
+    int cap, count, MaxP, MaxQ, MaxS, MaxT, MaxV,FMN,FMP,FMQ,FMS,FMT,FMV;
     int Fsum[3]; // 0:pro, 1:res, 2:ana
 } Dic;
 
@@ -71,7 +71,7 @@ typedef struct { int n3, n2, n1, bnam, cnam, sum, tqy, qy, tst; } PS_t;
 PS_t PS;
 int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode) {
     int low = 0, cmp = 0, high = Pro->count - 1, mid, r, s;
-    if (Pro->MaxN < PS.cnam) Pro->MaxN = PS.cnam;
+    if (Pro->FMN < PS.cnam) Pro->FMN = PS.cnam;
     while (low <= high) {
         mid = (low + high) / 2;
         if ((cmp = strcmp(name, Pro->dat[mid].name)) == 0) {
@@ -80,18 +80,18 @@ int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode)
                 Pro->dat[mid].tqy += tqy; 
                 Pro->dat[mid].vis += qy;
                 for (r = 1, s = Pro->dat[mid].summa; s > 9; s /= 10, r++);
-                Pro->dat[mid].FCS = r; if (Pro->MaxS < r) Pro->MaxS = r;
-                for (r = 1, s = Pro->dat[mid].tqy;   s > 9; s /= 10, r++);
-                Pro->dat[mid].FCT = r; if (Pro->MaxT < r) Pro->MaxT = r;
-                for (r = 1, s = Pro->dat[mid].vis;   s > 9; s /= 10, r++);
-                Pro->dat[mid].FCV = r; if (Pro->MaxV < r) Pro->MaxV = r; }
+                if (Pro->MaxS < Pro->dat[mid].summa) { Pro->MaxS = Pro->dat[mid].summa; Pro->FMS = r; }
+                for (r = 1, s = Pro->dat[mid].tqy; s > 9 ; s /= 10, r++);
+                if (Pro->MaxT < Pro->dat[mid].tqy) { Pro->MaxT = Pro->dat[mid].tqy; Pro->FMT = r; }
+                for (r = 1, s = Pro->dat[mid].vis; s > 9 ; s /= 10, r++);
+                if (Pro->MaxV < Pro->dat[mid].vis) { Pro->MaxV = Pro->dat[mid].vis; Pro->FMV = r; } }
             else { Pro->dat[mid].price = summa;
                 if (tqy) Pro->dat[mid].qy += tqy;
                 else Pro->dat[mid].qy = 0;
                 if (Pro->dat[mid].qy > 99) Pro->dat[mid].qy=99;
-                PS.tqy = 1; if (Pro->dat[mid].qy > 9) PS.tqy = 2;
-                Pro->dat[mid].FCP = PS.sum; if (Pro->MaxP < PS.sum) Pro->MaxP = PS.sum;
-                Pro->dat[mid].FCQ = PS.tqy; if (Pro->MaxQ < PS.tqy) Pro->MaxQ = PS.tqy; }
+                PS.tqy = 1; if (Pro->dat[mid].qy > 9) PS.tqy++;
+                if (Pro->MaxP < summa) { Pro->MaxP = summa; Pro->FMP = PS.sum; }
+                if (Pro->MaxQ < tqy) { Pro->MaxQ = tqy; Pro->FMQ = PS.tqy; } }
             return mid; }
         if (cmp < 0) high = mid - 1;
         else low = mid + 1; }
@@ -102,19 +102,21 @@ int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode)
         Pro->dat = tmp; }
     for (int i = Pro->count; i > low; i--) Pro->dat[i] = Pro->dat[i-1];
     Pro->dat[low].name = os_strdup(name); Pro->dat[low].nameC = PS.cnam; Pro->dat[low].FCN = PS.bnam - PS.cnam;
-    if (mode) { Pro->dat[low].summa = summa; Pro->dat[low].tqy = tqy; Pro->dat[low].vis = qy; Pro->dat[low].price = summa/tqy;
-                Pro->dat[low].FCS = PS.sum; Pro->dat[low].FCT = PS.tqy; for (r = 1, s = Pro->dat[low].price;   s > 9; s /= 10, r++);
-                Pro->dat[low].FCV = PS.qy; Pro->dat[low].FCP = r;
-                if (Pro->MaxS < Pro->dat[low].FCS) Pro->MaxS = Pro->dat[low].FCS;
-                if (Pro->MaxT < Pro->dat[low].FCT) Pro->MaxT = Pro->dat[low].FCT;
-                if (Pro->MaxV < Pro->dat[low].FCV) Pro->MaxV = Pro->dat[low].FCV; }
-    else { if (tqy > 99) { tqy = 99; PS.tqy = 2; }
-           Pro->dat[low].price = summa; Pro->dat[low].qy = tqy; Pro->dat[low].FCP = PS.sum; Pro->dat[low].FCQ = PS.tqy; 
-           Pro->dat[low].summa = 0; Pro->dat[low].tqy = 0; Pro->dat[low].vis = 0;
-           Pro->dat[low].FCS = 1; Pro->dat[low].FCT = 1; Pro->dat[low].FCV = 1;
-           if (Pro->MaxQ < Pro->dat[low].FCQ) Pro->MaxQ = Pro->dat[low].FCQ; }
-    if (Pro->MaxP < Pro->dat[low].FCP) Pro->MaxP = Pro->dat[low].FCP;
-    Pro->count++; return low;}
+    if (mode) { Pro->dat[low].summa = summa; Pro->dat[low].tqy = tqy; Pro->dat[low].vis = qy; Pro->dat[low].qy = 0;
+                Pro->dat[low].price = summa/tqy; for (r = 1, s = Pro->dat[low].price; s > 9 ; s /= 10, r++);
+                if (Pro->MaxS < summa) { Pro->MaxS = summa; Pro->FMS = PS.sum; }
+                if (Pro->MaxT < tqy) { Pro->MaxT = tqy; Pro->FMT = PS.tqy; }
+                if (Pro->MaxV < qy) { Pro->MaxV = qy; Pro->FMV = PS.qy; } 
+                PS.sum = r; tqy = 0; PS.tqy = 1; }
+    else {  if (tqy > 99) { tqy = 99; PS.tqy = 2; }
+            Pro->dat[low].price = summa; Pro->dat[low].qy = tqy;
+            Pro->dat[low].summa = 0; Pro->dat[low].tqy = 0; Pro->dat[low].vis = 0; 
+            if (Pro->MaxS <= 0) { Pro->MaxS = 0; Pro->FMS = 1; }
+            if (Pro->MaxT <= 0) { Pro->MaxT = 0; Pro->FMT = 1; }
+            if (Pro->MaxV <= 0) { Pro->MaxV = 0; Pro->FMV = 1; } }
+    if (Pro->MaxQ < tqy) { Pro->MaxQ = tqy; Pro->FMQ = PS.tqy; }
+    if (Pro->MaxP < Pro->dat[low].price) { Pro->MaxP = Pro->dat[low].price; Pro->FMP = PS.sum; } 
+    Pro->count++; return low; }
 int AddDic(Dic* Pro, const char* name, int summa, int tqy) { int i;
     if ( !name || name[0] == 0 || summa < 1 || tqy < 0) return -1;
     PS.sum = 1; for ( i = summa; i > 9 ; i /= 10,  PS.sum++);
@@ -163,8 +165,7 @@ int LoadDic(Dic* Pro, const char* filename) {
                                                   if (sl == 0) sl = sf; }
                 ParseBuf(Pro, FileBuf, FileBuf+sl, i); Tail = sf - sl; if (Tail > 0) memmove(FileBuf, FileBuf + sl, Tail);
                 if (lf < DBuf) break; }
-            os_close_file(File);
-            Pro->Fsum[i] = PS.tst; 
+            os_close_file(File); Pro->Fsum[i] = PS.tst; 
             if (PS.n1 > 0 && PS.tst != PS.n1) { Pro->Fsum[i] = 0; f = -2; } } }
     return f; }
     
@@ -179,19 +180,19 @@ void SaveDic(Dic* Pro, const char* filename) {
         switch (i) {
             case 0:
                 s += Pro->dat[k].price; 
-                os_print_file(f, "%*d %s\n", Pro->MaxP, Pro->dat[k].price, STU(Pro->dat[k].name)); 
+                os_print_file(f, "%*d %s\n", Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name)); 
                 break;
             case 1:
                 if (Pro->dat[k].qy > 0) { 
                     s += Pro->dat[k].price * Pro->dat[k].qy;
-                    os_print_file(f, "%02d %2d %*d %s\n", ++j, Pro->dat[k].qy, Pro->MaxP, Pro->dat[k].price, STU(Pro->dat[k].name)); }
+                    os_print_file(f, "%02d %2d %*d %s\n", ++j, Pro->dat[k].qy, Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name)); }
                 break;
             case 2:
                 if (Pro->dat[k].summa > 0) {
                     s += Pro->dat[k].summa; 
                     os_print_file(f, "%*d %*d %*d %s\n", 
-                                  Pro->MaxV, Pro->dat[k].vis, Pro->MaxT, Pro->dat[k].tqy, 
-                                  Pro->MaxS, Pro->dat[k].summa, STU(Pro->dat[k].name)); }
+                                  Pro->FMV, Pro->dat[k].vis, Pro->FMT, Pro->dat[k].tqy, 
+                                  Pro->FMS, Pro->dat[k].summa, STU(Pro->dat[k].name)); }
                 break; } }
     os_print_file(f, "%d\n", s);
     os_close_file(f); }
@@ -204,26 +205,24 @@ int PrintDic(Dic* Pro) {
         if (Pro->dat[i].qy > 1) printf(Cnu "%2d ", Pro->dat[i].qy);
         else printf("   ");
         printf(Cnu "%*d " Cna "%-*s\n", 
-               Pro->MaxP, Pro->dat[i].price, 
-               Pro->MaxN + Pro->dat[i].FCN, Pro->dat[i].name); }
+               Pro->FMP, Pro->dat[i].price, 
+               Pro->FMN + Pro->dat[i].FCN, Pro->dat[i].name); }
     return count; }
 
 void Analitics(Dic* Pro) {
     if (!Pro || Pro->count <= 0) return;
-    int i, j, total_S = 0, total_Q = 0, today_S = 0;
+    int i, j, total_S = 0, total_Q = 0, total_V = 0, today_S = 0;
     for (i = 0; i < Pro->count; i++) {
-        total_S += Pro->dat[i].summa;
-        total_Q += Pro->dat[i].tqy;
-        today_S += Pro->dat[i].price * Pro->dat[i].tqy; }
+        total_S += Pro->dat[i].summa; total_Q += Pro->dat[i].tqy;
+        today_S += Pro->dat[i].price * Pro->dat[i].tqy; if (Pro->dat[i].vis > total_V) total_V = Pro->dat[i].vis; }
     if (!total_S || !total_Q) return;
     int *idx = (int*)os_malloc(Pro->count * sizeof(int));
     for (i = 0; i < Pro->count; i++) idx[i] = i;
     for (i = 0; i < Pro->count - 1; i++)
         for (j = i + 1; j < Pro->count; j++)
-            if (Pro->dat[idx[i]].summa < Pro->dat[idx[j]].summa) {
-                int t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
+            if (Pro->dat[idx[i]].summa < Pro->dat[idx[j]].summa) { int t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
     printf(Cls Cna "## %-*s " Cnu "%*s " Cnu "%%🔥 " Cnu "%%💰 " Cnu "🏁 " Cnu "%*s\n",
-           Pro->MaxN + 2, "📦", Pro->MaxP, " 💸", Pro->MaxT, "∑");
+           Pro->FMN + 2, "📦", Pro->FMP, " 💸", Pro->FMT, "∑");
     for (i = 0; i < Pro->count; i++) {
         int k = idx[i];
         if (Pro->dat[k].vis == 0) continue;
@@ -233,10 +232,10 @@ void Analitics(Dic* Pro) {
         const char* trend = (Pro->dat[k].price > avg) ? Cam "🚩" : (Pro->dat[k].price < avg) ? Cap "🟢" : Cna "🏳️ ";
         const char* hit = (freq > 25) ? Cap "💎" : (freq < 5) ? Cam "🐌" : "  ";
         printf(Cnn "%02d " Cna "%-*s " Cnu "%*d " Cna "%2d%% " Cnu "%2d%% " "%s " Cnu "%*d %s\n",
-               i + 1, Pro->MaxN + Pro->dat[k].FCN, Pro->dat[k].name,
-               Pro->MaxP, avg, freq, share, trend, Pro->MaxT, Pro->dat[k].tqy, hit); }
+               i + 1, Pro->FMN + Pro->dat[k].FCN, Pro->dat[k].name,
+               Pro->FMP, avg, freq, share, trend, Pro->FMT, Pro->dat[k].tqy, hit); }
     int infl = ((today_S - total_S) * 100) / total_S;
-    printf(Cna "\n🏦 " Cnu "🛒%d " Cna "💳" Cap "%d\n", total_Q, total_S);
+    printf(Cna "\n🏦 " Cnu "🛒%d " Cna "💳" Cap "%d\n", total_V, total_S);
     printf(Cnu "🧐 " "%s%s " Cnu "%d (" "%s%+d%%" Cnu ")\n", 
            (infl > 0) ? Cam "📈" : Cap "📉", (infl > 0) ? "😱" : "😎", today_S, 
            (infl > 0) ? Cam : Cap, infl);
@@ -275,9 +274,9 @@ char* prw(Dic* Pro, const char *str1, int i) {
     char *res = (char*)(FileBuf + NBuf);
     int b1, c1, b2, c2, sp;
     b1 = StringBC(str1, &c1);
-    if (i < 0 || i >= Pro->count) { sp = Pro->MaxN + b1 - c1; sprintf(res, Cna "%-*s", sp, str1); }
+    if (i < 0 || i >= Pro->count) { sp = Pro->FMN + b1 - c1; sprintf(res, Cna "%-*s", sp, str1); }
     else { const char *full_name = Pro->dat[i].name;
-           b2 = StringBC(full_name, &c2); sp = Pro->MaxN + b2 - c2; sprintf(res, Cna "%s" Cnn "%-*s", str1, sp - b1, full_name + b1); }
+           b2 = StringBC(full_name, &c2); sp = Pro->FMN + b2 - c2; sprintf(res, Cna "%s" Cnn "%-*s", str1, sp - b1, full_name + b1); }
     return res; }
     
 typedef struct { char name[BufN+1]; int len,price,lp,col; } IN_t;
@@ -296,7 +295,7 @@ void Products(Dic* Pro) {
         if (num == -1) {
             printf( Cls Cna ); num = 1 + PrintDic(Pro); printf(SCur); }
         if (cr!=-1) { if (IN.lp == 0) IN.price=Pro->dat[cr].price; }
-        printf(LCur Cnn "%02d " Cnu "%2d " Cnu "%*d " Cna "%s", num, IN.col, Pro->MaxP, IN.price, prw(Pro, IN.name, cr)); fflush(stdout);
+        printf(LCur Cnn "%02d " Cnu "%2d " Cnu "%*d " Cna "%s", num, IN.col, Pro->FMP, IN.price, prw(Pro, IN.name, cr)); fflush(stdout);
         delay_ms(120);
         const char *key = GetKey();
         if (key[0] == 27 && key[1] == 0) { 
@@ -337,14 +336,14 @@ void Products(Dic* Pro) {
                                 if (cr == -1) { 
                                     if (AddDic(Pro, IN.name, IN.price, IN.col) == -1) { 
                                         printf("\n🚩\n"); fflush(stdout); delay_ms(1500); IN.col = -1; continue; }
-                                    if (IN.len > Pro->MaxN) Pro->MaxN = IN.len;
+                                    if (IN.len > Pro->FMN) Pro->FMN = IN.len;
                                     if (IN.lp > Pro->MaxP) Pro->MaxP = IN.lp; }
                                 else { 
                                     if (IN.col == 0) Pro->dat[cr].qy = 0;
                                     else {
                                         IN.col = Pro->dat[cr].qy + IN.col; Pro->dat[cr].qy = (IN.col > 99) ? 99 : IN.col; }
-                                    if (IN.len < Mname+1 && IN.len > Pro->MaxN) Pro->MaxN = IN.len;
-                                    if (IN.lp > Pro->MaxP) Pro->MaxP = IN.lp;
+                                    if (IN.len < Mname+1 && IN.len > Pro->FMN) Pro->FMN = IN.len;
+                                    if (IN.lp > Pro->FMP) Pro->FMP = IN.lp;
                                     Pro->dat[cr].price = IN.price; }
                                 IN.col = -1; }
                             continue;
