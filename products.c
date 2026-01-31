@@ -331,13 +331,13 @@ void Products(Dic* Pro) {
                                 if (b > 0) { 
                                     b = Fpi(Pro,IN.name,&i); strcpy(IN.name, Pro->dat[i].name); cr = i; }
                                 else { 
-                                    if (IN.name[StrLenB(IN.name) - 1] == 32) IN.len--;
+                                    if (IN.name[StrLenB(IN.name) - 1] == 32) { IN.len--; IN.name[StrLenB(IN.name) - 1] = 0; }
                                     IN.name[StrLenB(IN.name)] = 0; cr = -1; }
                                 if (cr == -1) { 
                                     if (AddDic(Pro, IN.name, IN.price, IN.col) == -1) { 
                                         printf("\n🚩\n"); fflush(stdout); delay_ms(1500); IN.col = -1; continue; }
                                     if (IN.len > Pro->FMN) Pro->FMN = IN.len;
-                                    if (IN.lp > Pro->MaxP) Pro->MaxP = IN.lp; }
+                                    if (IN.lp > Pro->FMP) Pro->FMP = IN.lp; }
                                 else { 
                                     if (IN.col == 0) Pro->dat[cr].qy = 0;
                                     else {
