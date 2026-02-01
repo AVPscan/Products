@@ -32,7 +32,7 @@ jobs:
         run: apk add --no-cache build-base make musl binutils
 
       - name: Run make musl
-        # Просто вызываем вашу цель make musl, которая знает что делать
+        # Просто вызываем вашу цель make musl, которая теперь умная
         run: make musl
 
       - name: Upload Linux Artifact
