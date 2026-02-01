@@ -18,19 +18,21 @@ on:
 jobs:
   # Задача 1: Сборка исполняемого файла для Linux (статический MUSL)
   build-linux:
+    # Запускаем задачу внутри Docker-контейнера Alpine Linux
     runs-on: ubuntu-latest
+    container: alpine:latest
     steps:
       - name: Checkout repository
+        # Используем специальный action для работы в контейнере
         uses: actions/checkout@v4
       
-      # Устанавливаем кросс-компилятор MUSL на ранере Ubuntu
-      - name: Install musl-tools
-        run: sudo apt-get update && sudo apt-get install -y musl-tools build-essential
+      - name: Install build tools (GCC and make in Alpine)
+        run: apk add --no-cache gcc make musl-libc
 
       - name: Compile with musl-gcc (bypassing makefile)
         run: |
-          # Определяем переменные для компиляции
-          CC_MUSL="x86_64-linux-musl-gcc"
+          # Все библиотеки в Alpine по умолчанию MUSL
+          CC_MUSL="gcc"
           SOURCES="products.c sys_linux.c"
           TARGET="products"
           
@@ -41,15 +43,14 @@ jobs:
           
           # Ваши LDFLAGS_TINY из makefile + принудительная статика и strip-команды
           LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
-          LDFLAGS+=" -static -Wl,-z,pack-relative-relocs"
+          # -static не нужен, так как Alpine собирает статически по умолчанию в этой конфигурации
+          LDFLAGS+=" -Wl,-z,pack-relative-relocs"
           
           # Выполняем компиляцию напрямую
           $CC_MUSL $CFLAGS -o $TARGET $SOURCES $LDFLAGS
           
           # Выполняем strip-оптимизацию, как в вашем makefile
-          strip --strip-all --remove-section=.note.gnu.build-id \
-                --remove-section=.note.ABI-tag \
-                --remove-section=.comment $TARGET 2>/dev/null || true
+          strip --strip-all $TARGET
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
