@@ -2,7 +2,7 @@
 [![Build on Linux](https://github.com/AVPscan/Products/actions/workflows/build-linux.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/build-linux.yml)
  [![Build on Windows](https://github.com/AVPscan/Products/actions/workflows/build-windows.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/build-windows.yml)
  [![Build on macOS](https://github.com/AVPscan/Products/actions/workflows/build-macos.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/build-macos.yml)
- [![Release Executables (Cross-Platform)](https://github.com/AVPscan/Products/actions/workflows/release.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/release.yml)
+[![Linux musl static +(Cross-Platform)](https://github.com/AVPscan/Products/actions/workflows/release.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/release.yml)
  
 **Author:** Алексей Васильевич Поздняков (Alexey V. Pozdnyakov)  
 **Email:** avp70ru@mail.ru  
