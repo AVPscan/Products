@@ -7,32 +7,35 @@ on:
 
 jobs:
   build:
-    # Используем матрицу для запуска сборки на разных ОС параллельно
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        # Продолжать, даже если одна из ОС падает
+        fail-fast: false 
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Устанавливаем MinGW только для Windows
       - name: Set up MinGW on Windows
         if: matrix.os == 'windows-latest'
         uses: egor-tensin/setup-mingw@v1
         with:
           platform: x64
+          
+      # Шаг сборки для Linux
+      - name: Build Linux Project
+        if: matrix.os == 'ubuntu-latest'
+        run: make
 
-      - name: Build Project
-        run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            make OS=Windows_NT
-          else
-            make
-          fi
-        shell: bash # Используем bash для выполнения команд на обеих ОС
+      # Шаг сборки для Windows
+      - name: Build Windows Project
+        if: matrix.os == 'windows-latest'
+        run: make OS=Windows_NT
+        shell: bash
 
+      # ... (остальные шаги с архивированием и upload-artifact остаются прежними) ...
       - name: Rename and Archive Artifact
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
@@ -42,29 +45,25 @@ jobs:
             zip linux_release.zip продукты
             echo "::set-output name=artifact_name::linux_release.zip"
           fi
-        id: archive_step # Присваиваем ID шагу, чтобы использовать его вывод
+        id: archive_step 
 
-      # Загружаем артефакт в рамках этого задания
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.archive_step.outputs.artifact_name }}
           path: ${{ steps.archive_step.outputs.artifact_name }}
 
-
   create-release:
-    # Запускаем только после успешной сборки обеих ОС
     needs: build
     runs-on: ubuntu-latest
+    # ... (остальные шаги создания релиза остаются прежними) ...
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Скачиваем артефакты, созданные на предыдущем этапе
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      # --- Создание Релиза ---
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
