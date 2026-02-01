@@ -1,0 +1,24 @@
+name: Cross-Platform Build Check
+
+on: [push]
+
+jobs:
+  # Проверка сборки под Linux
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: make
+
+  # Проверка сборки под Windows
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (MinGW)
+        shell: bash
+        run: |
+          # В Windows на GitHub по умолчанию стоит gcc (MinGW)
+          make OS=Windows_NT
+
