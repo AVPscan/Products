@@ -1,3 +1,4 @@
+#
 # Copyright (C) 2026 Поздняков Алексей Васильевич
 # E-mail: avp70ru@mail.ru
 # 
@@ -9,51 +10,54 @@
 CC ?= gcc
 TARGET = products
 
-# Автоматически определяем ОС, если переменная OS не задана (как в GitHub Actions)
+# Автоматически определяем ОС, если переменная OS не задана
 UNAME_S := $(shell uname -s)
 
 ifeq ($(OS),Windows_NT)
-    SYS_SRC = sys_windows.c
-    EXT = .exe
-    LIBS = -lkernel32 -luser32
-    GET_SIZE = wc -c < $(TARGET)$(EXT)
+	SYS_SRC = sys_windows.c
+	EXT = .exe
+	LIBS = -lkernel32 -luser32
+	GET_SIZE = wc -c < $(TARGET)$(EXT)
 else ifeq ($(UNAME_S),Darwin)
-	# Конфигурация для macOS
-    SYS_SRC = sys_macos.c
-    EXT =
-    LIBS = 
-    # Команда получения размера файла для macOS (BSD stat)
-    GET_SIZE = stat -f %z $(TARGET)$(EXT)
+	# Конфигурация для macOS (Darwin)
+	SYS_SRC = sys_macos.c
+	EXT =
+	LIBS =
+	GET_SIZE = stat -f %z $(TARGET)$(EXT)
 else
-	# Конфигурация по умолчанию для Linux (UNAME_S == Linux)
-    SYS_SRC = sys_linux.c
-    EXT =
-    LIBS =
-    GET_SIZE = stat -c%s $(TARGET)$(EXT)
+	# Конфигурация по умолчанию для Linux
+	SYS_SRC = sys_linux.c
+	EXT =
+	LIBS =
+	GET_SIZE = stat -c%s $(TARGET)$(EXT)
 endif
 
 SOURCES = products.c $(SYS_SRC)
 
 # Базовые флаги
 BASE_CFLAGS = -std=c11 -Os -DNDEBUG -Wall -Wextra
+
+# ИСПРАВЛЕНИЕ: Добавляем POSIX флаг ТОЛЬКО для Linux, не для Windows и не для Darwin (macOS)
 ifneq ($(OS),Windows_NT)
-    BASE_CFLAGS += -D_POSIX_C_SOURCE=200809L
+	ifeq ($(UNAME_S),Linux)
+		BASE_CFLAGS += -D_POSIX_C_SOURCE=200809L
+	endif
 endif
 
 # Флаги линковки
 BASE_LDFLAGS = -flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none $(LIBS)
 
 CFLAGS_TINY = $(BASE_CFLAGS) \
-              -ffunction-sections -fdata-sections \
-              -fno-unwind-tables -fno-asynchronous-unwind-tables \
-              -fno-ident -fomit-frame-pointer
+			  -ffunction-sections -fdata-sections \
+			  -fno-unwind-tables -fno-asynchronous-unwind-tables \
+			  -fno-ident -fomit-frame-pointer
 
 LDFLAGS_TINY = $(BASE_LDFLAGS)
 ifneq ($(OS),Windows_NT)
-    # Эти флаги специфичны для линкера GNU ld (Linux)
-    ifeq ($(UNAME_S),Linux)
-    	LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
-    endif
+	# Эти флаги специфичны для линкера GNU ld (Linux), не сработают на macOS/Darwin
+	ifeq ($(UNAME_S),Linux)
+		LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
+	endif
 endif
 
 .PHONY: all tiny clean run size help g c musl g-musl
@@ -80,7 +84,7 @@ g-musl:
 	@if [ "$(UNAME_S)" != "Linux" ]; then echo "⚠️  MUSL static build is only supported on Linux environment."; else $(MAKE) tiny CC=gcc CFLAGS_TINY="$(CFLAGS_TINY) -static" LDFLAGS_TINY="$(LDFLAGS_TINY) -static"; fi
 
 size:
-	@SIZE=$$($(GET_SIZE) 2>/dev/null || echo 0); \
+	@SIZE=$$(stat -c%s $(TARGET) 2>/dev/null || echo 0); \
 	echo "📏 Размер бинарника: $$SIZE байт"; \
 	TARGET_SIZE=27000; \
 	if [ $$SIZE -le $$TARGET_SIZE ] && [ $$SIZE -gt 0 ]; then \
