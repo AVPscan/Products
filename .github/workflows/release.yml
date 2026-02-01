@@ -16,6 +16,7 @@ on:
         type: string
 
 jobs:
+
   # Задача 1: Сборка исполняемого файла для Linux (статический MUSL)
   build-linux:
     # Запускаем задачу внутри Docker-контейнера Alpine Linux
@@ -26,12 +27,13 @@ jobs:
         # Используем специальный action для работы в контейнере
         uses: actions/checkout@v4
       
+      # ИСПРАВЛЕНО: Используем 'musl' вместо 'musl-libc'
       - name: Install build tools (GCC and make in Alpine)
-        run: apk add --no-cache gcc make musl-libc
+        run: apk add --no-cache gcc make musl
 
       - name: Compile with musl-gcc (bypassing makefile)
         run: |
-          # Все библиотеки в Alpine по умолчанию MUSL
+          # Определяем переменные для компиляции
           CC_MUSL="gcc"
           SOURCES="products.c sys_linux.c"
           TARGET="products"
@@ -43,7 +45,6 @@ jobs:
           
           # Ваши LDFLAGS_TINY из makefile + принудительная статика и strip-команды
           LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
-          # -static не нужен, так как Alpine собирает статически по умолчанию в этой конфигурации
           LDFLAGS+=" -Wl,-z,pack-relative-relocs"
           
           # Выполняем компиляцию напрямую
