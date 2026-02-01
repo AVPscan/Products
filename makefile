@@ -68,8 +68,8 @@ c: tiny
 musl: g-musl
 
 g-musl: 
-	# ИСПРАВЛЕНИЕ: Многострочный скрипт объединен в одну логическую команду с escape-символами
-	@if command -v x86_64-linux-musl-gcc >/dev/null; then $(MAKE) tiny CC=x86_64-linux-musl-gcc LDFLAGS_TINY+='-static'; elif command -v gcc >/dev/null && ! command -v ldd >/dev/null; then $(MAKE) tiny CC=gcc LDFLAGS_TINY+='-static'; else echo "Ошибка: Не найден musl-компилятор или окружение не подходит."; exit 1; fi
+	# Используем GCC по умолчанию и принудительно статическую линковку
+	$(MAKE) tiny LDFLAGS_TINY+='-static'
 
 size:
 	@SIZE=$$($(GET_SIZE) 2>/dev/null || echo 0); \
