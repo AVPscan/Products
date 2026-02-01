@@ -19,17 +19,20 @@ jobs:
 
   # Задача 1: Сборка исполняемого файла для Linux (статический MUSL)
   build-linux:
+    # Используем чистый контейнер Alpine Linux, где по умолчанию только MUSL
     runs-on: ubuntu-latest
+    container: alpine:latest
     steps:
       - name: Checkout repository
+        # Используем специальный action для работы в контейнере
         uses: actions/checkout@v4
       
-      # Устанавливаем кросс-компилятор MUSL на ранере Ubuntu
-      - name: Install musl-tools
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      # Используем пакет 'build-base' (включает gcc, libc-dev) и 'make'
+      - name: Install build tools (GCC, make, and musl in Alpine)
+        run: apk add --no-cache build-base make musl binutils
 
       - name: Run make musl
-        # Просто вызываем новую цель make musl, которая знает что делать
+        # Просто вызываем вашу цель make musl, которая знает что делать
         run: make musl
 
       - name: Upload Linux Artifact
