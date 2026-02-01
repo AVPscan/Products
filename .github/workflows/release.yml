@@ -91,21 +91,33 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        # Заменяем uses: actions/create-release@v1 на выполнение через gh CLI
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.get_version.outputs.version }}
-          release_name: Release v${{ steps.get_version.outputs.version }}
-          draft: false
-          prerelease: false
+        run: |
+          # Устанавливаем версию релиза
+          TAG_NAME="v${{ steps.get_version.outputs.version }}"
+          RELEASE_NAME="Release v${{ steps.get_version.outputs.version }}"
+          
+          # Создаем черновик релиза с автоматически сгенерированными заметками
+          gh release create "$TAG_NAME" \
+            --repo="$GITHUB_REPOSITORY" \
+            --title="$RELEASE_NAME" \
+            --draft \
+            --generate-notes
+            
+          # Получаем URL для загрузки ассетов из созданного релиза
+          echo "UPLOAD_URL=$(gh release view "$TAG_NAME" --repo="$GITHUB_REPOSITORY" --json uploadUrl -q .uploadUrl)" >> $GITHUB_ENV
 
+      # Обратите внимание: шаги Upload Linux Release Asset и Upload Windows Release Asset
+      # теперь должны использовать переменную среды UPLOAD_URL из предыдущего шага.
+      
       - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./products
           asset_name: AVPscan-Linux-v${{ steps.get_version.outputs.version }}
           asset_content_type: application/octet-stream
@@ -115,7 +127,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./products.exe
           asset_name: AVPscan-Windows-v${{ steps.get_version.outputs.version }}.exe
           asset_content_type: application/octet-stream
+
