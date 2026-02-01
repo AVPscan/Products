@@ -217,7 +217,7 @@ void Analitics(Dic* Pro) {
     for (i = 0; i < Pro->count - 1; i++)
         for (j = i + 1; j < Pro->count; j++)
             if (Pro->dat[idx[i]].summa < Pro->dat[idx[j]].summa) { int t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
-    printf(Cls Cna "   %-*s " Cnu "%*s " Cnu "%*s\n", Pro->FMN + 2, "📋", Pro->FMP, " 📊", Pro->FMT, " ⚖️ ");
+    printf(Cls Cna "   %-*s " Cnu "%*s " Cnu "%*s\n", Pro->FMN + 2, "📋", Pro->FMP, "📊", Pro->FMT, " ⚖️ ");
     for (i = 0; i < Pro->count; i++) {
         k = idx[i]; if (Pro->dat[k].tqy == 0 || Pro->MaxV == 0 || Pro->dat[k].summa == 0) continue;
         avg = Pro->dat[k].summa / Pro->dat[k].tqy;
