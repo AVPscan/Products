@@ -2,6 +2,9 @@
 ![Linux Build status](https://github.com)
 ![Windows Build status](https://github.com)
 
+![Linux Build status](https://github.com)
+![Windows Build status](https://github.com)
+
 **Author:** Алексей Васильевич Поздняков (Alexey V. Pozdnyakov)  
 **Email:** avp70ru@mail.ru  
 **License:** GPLv3
