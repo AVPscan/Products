@@ -45,7 +45,8 @@ jobs:
           
           # Ваши LDFLAGS_TINY из makefile + принудительная статика (-static)
           LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
-          LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs -static" # <- ФЛАГ -static добавлен
+          # Вот здесь мы гарантированно добавляем флаг статической линковки:
+          LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs -static" 
 
           # Выполняем компиляцию напрямую
           $CC_MUSL $CFLAGS -o $TARGET $SOURCES $LDFLAGS
@@ -58,7 +59,6 @@ jobs:
         with:
           name: linux-executable
           path: products
-
 
   # Задача 2: Сборка исполняемого файла для Windows (стандартная)
   build-windows:
