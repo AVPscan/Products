@@ -27,7 +27,7 @@ jobs:
         # Используем специальный action для работы в контейнере
         uses: actions/checkout@v4
       
-      # ИСПРАВЛЕНО: Используем пакет 'build-base', который включает все необходимое
+      # Используем пакет 'build-base', который включает все необходимое
       - name: Install build tools (GCC, make, and musl in Alpine)
         run: apk add --no-cache build-base musl binutils
 
@@ -45,8 +45,7 @@ jobs:
           
           # Ваши LDFLAGS_TINY из makefile + принудительная статика (-static)
           LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
-          # Вот здесь мы гарантированно добавляем флаг статической линковки:
-          LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs -static" 
+          LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs -static"
 
           # Выполняем компиляцию напрямую
           $CC_MUSL $CFLAGS -o $TARGET $SOURCES $LDFLAGS
