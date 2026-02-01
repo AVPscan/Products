@@ -37,7 +37,7 @@ SOURCES = products.c $(SYS_SRC)
 # Базовые флаги
 BASE_CFLAGS = -std=c11 -Os -DNDEBUG -Wall -Wextra
 
-# ИСПРАВЛЕНИЕ: Добавляем POSIX флаг ТОЛЬКО для Linux, не для Windows и не для Darwin (macOS)
+# Добавляем POSIX флаг ТОЛЬКО для Linux, не для Windows и не для Darwin (macOS)
 ifneq ($(OS),Windows_NT)
 	ifeq ($(UNAME_S),Linux)
 		BASE_CFLAGS += -D_POSIX_C_SOURCE=200809L
@@ -47,11 +47,9 @@ endif
 # Флаги линковки (Базовые, совместимые)
 BASE_LDFLAGS = -flto $(LIBS)
 
-# Добавляем специфичные для GNU/Linux флаги, если ОС не Windows и не Darwin
-ifneq ($(OS),Windows_NT)
-	ifeq ($(UNAME_S),Linux)
-		BASE_LDFLAGS += -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none
-	endif
+# Добавляем специфичные флаги линковщика для MinGW (Windows) и GNU ld (Linux), но не для macOS (Darwin)
+ifneq ($(UNAME_S),Darwin)
+	BASE_LDFLAGS += -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none
 endif
 
 
@@ -62,7 +60,7 @@ CFLAGS_TINY = $(BASE_CFLAGS) \
 
 LDFLAGS_TINY = $(BASE_LDFLAGS)
 ifneq ($(OS),Windows_NT)
-	# Эти флаги специфичны для линкера GNU ld (Linux), не сработают на macOS/Darwin
+	# Этот флаг специфичен только для линкера GNU ld (Linux)
 	ifeq ($(UNAME_S),Linux)
 		LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
 	endif
