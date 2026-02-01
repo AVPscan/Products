@@ -44,8 +44,16 @@ ifneq ($(OS),Windows_NT)
 	endif
 endif
 
-# Флаги линковки
-BASE_LDFLAGS = -flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none $(LIBS)
+# Флаги линковки (Базовые, совместимые)
+BASE_LDFLAGS = -flto $(LIBS)
+
+# Добавляем специфичные для GNU/Linux флаги, если ОС не Windows и не Darwin
+ifneq ($(OS),Windows_NT)
+	ifeq ($(UNAME_S),Linux)
+		BASE_LDFLAGS += -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none
+	endif
+endif
+
 
 CFLAGS_TINY = $(BASE_CFLAGS) \
 			  -ffunction-sections -fdata-sections \
@@ -54,10 +62,13 @@ CFLAGS_TINY = $(BASE_CFLAGS) \
 
 LDFLAGS_TINY = $(BASE_LDFLAGS)
 ifneq ($(OS),Windows_NT)
-	LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
+	# Эти флаги специфичны для линкера GNU ld (Linux), не сработают на macOS/Darwin
+	ifeq ($(UNAME_S),Linux)
+		LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
+	endif
 endif
 
-.PHONY: all tiny clean run size help g c musl g-musl
+.PHONY: all tiny clean run size help g c musl g-musl mac
 
 all: tiny
 
@@ -80,6 +91,10 @@ musl: g-musl
 g-musl: 
 	@if [ "$(UNAME_S)" != "Linux" ]; then echo "⚠️  MUSL static build is only supported on Linux environment."; else $(MAKE) tiny CC=gcc CFLAGS_TINY="$(CFLAGS_TINY) -static" LDFLAGS_TINY="$(LDFLAGS_TINY) -static"; fi
 
+# Новая цель: сборка для Mac (для использования в GH Actions runner macos-latest)
+mac:
+	@if [ "$(UNAME_S)" != "Darwin" ]; then echo "⚠️  'make mac' target only runs on macOS (Darwin)."; else $(MAKE) tiny; fi
+
 size:
 	@SIZE=$$(stat -c%s $(TARGET) 2>/dev/null || echo 0); \
 	echo "📏 Размер бинарника: $$SIZE байт"; \
@@ -99,4 +114,4 @@ run: tiny
 
 help:
 	@echo "Система: $(OS) | UNAME: $(UNAME_S) | Модуль: $(SYS_SRC)"
-	@echo "Цели: tiny (default), g (gcc), c (clang), run, clean, musl (static musl build on Linux only)"
+	@echo "Цели: tiny (default), g (gcc), c (clang), run, clean, musl (static musl build on Linux only), mac (build on macOS only)"
