@@ -1,0 +1,14 @@
+name: Build on macOS
+
+on: 
+  push:
+  workflow_dispatch: 
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run make
+        run: make
