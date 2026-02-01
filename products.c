@@ -1,3 +1,12 @@
+/* 
+ * Программа на C11
+ * Автор: Поздняков Алексей Васильевич
+ * Email: avp70ru@mail.ru
+ * 
+ * Copyright (c) 2026 Алексей Поздняков
+ * Лицензия: GPLv3
+ */
+ 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -169,33 +178,22 @@ int LoadDic(Dic* Pro, const char* filename) {
             if (PS.n1 > 0 && PS.tst != PS.n1) { Pro->Fsum[i] = 0; f = -2; } } }
     return f; }
     
-void SaveDic(Dic* Pro, const char* filename) {
-    int i = (strcmp(filename, DBase) == 0) ? 0 : 
-            (strncmp(filename, "rep", 3) == 0) ? 1 : 
-            (strncmp(filename, "ana", 3) == 0) ? 2 : 3; 
-    if (i == 3) return;
+int SaveDic(Dic* Pro, const char* filename) {
+    int k, j = 0, i = (strcmp(filename, DBase) == 0) ? 0 : 
+                      (strncmp(filename, "rep", 3) == 0) ? 1 : 
+                      (strncmp(filename, "ana", 3) == 0) ? 2 : 3;
+    for (k = 0; k < Pro->count ; k++) {
+        if (i == 0) j += Pro->dat[k].price;
+        else if (i == 1 && Pro->dat[k].qy > 0) j += Pro->dat[k].price * Pro->dat[k].qy;
+               else if (i == 2 && Pro->dat[k].summa > 0) j += Pro->dat[k].summa; }
+    Pro->Fsum[i] = j;
     void* f = os_create_file(filename); 
-    int j = 0, s = 0;
-    for (int k = 0; k < Pro->count; k++) {
-        switch (i) {
-            case 0:
-                s += Pro->dat[k].price; 
-                os_print_file(f, "%*d %s\n", Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name)); 
-                break;
-            case 1:
-                if (Pro->dat[k].qy > 0) { 
-                    s += Pro->dat[k].price * Pro->dat[k].qy;
-                    os_print_file(f, "%02d %2d %*d %s\n", ++j, Pro->dat[k].qy, Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name)); }
-                break;
-            case 2:
-                if (Pro->dat[k].summa > 0) {
-                    s += Pro->dat[k].summa; 
-                    os_print_file(f, "%*d %*d %*d %s\n", 
-                                  Pro->FMV, Pro->dat[k].vis, Pro->FMT, Pro->dat[k].tqy, 
-                                  Pro->FMS, Pro->dat[k].summa, STU(Pro->dat[k].name)); }
-                break; } }
-    os_print_file(f, "%d\n", s);
-    os_close_file(f); }
+    for (j = 0, k = 0; k < Pro->count ; k++) {
+        if (i ==0) os_print_file(f, "%*d %s\n", Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name)); 
+        else if (i == 1 && Pro->dat[k].qy > 0) os_print_file(f, "%02d %2d %*d %s\n", ++j, Pro->dat[k].qy, Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name));
+               else if (i == 2 && Pro->dat[k].summa > 0) os_print_file(f, "%*d %*d %*d %s\n", Pro->FMV, Pro->dat[k].vis, Pro->FMT, Pro->dat[k].tqy, 
+                                                                            Pro->FMS, Pro->dat[k].summa, STU(Pro->dat[k].name)); }
+    os_print_file(f, "%d\n", Pro->Fsum[i]); os_close_file(f); return Pro->Fsum[i]; }
 
 int PrintDic(Dic* Pro) {
     int count = 0;
@@ -211,35 +209,30 @@ int PrintDic(Dic* Pro) {
 
 void Analitics(Dic* Pro) {
     if (!Pro || Pro->count <= 0) return;
-    int i, j, total_S = 0, total_Q = 0, total_V = 0, today_S = 0;
+    int i, j, k, avg, vp, vv, rp = 0, total_S = 0, total_Q = 0, today_S = 0;
     for (i = 0; i < Pro->count; i++) {
         total_S += Pro->dat[i].summa; total_Q += Pro->dat[i].tqy;
-        today_S += Pro->dat[i].price * Pro->dat[i].tqy; if (Pro->dat[i].vis > total_V) total_V = Pro->dat[i].vis; }
+        today_S += Pro->dat[i].price * Pro->dat[i].tqy; }
     if (!total_S || !total_Q) return;
     int *idx = (int*)os_malloc(Pro->count * sizeof(int));
     for (i = 0; i < Pro->count; i++) idx[i] = i;
     for (i = 0; i < Pro->count - 1; i++)
         for (j = i + 1; j < Pro->count; j++)
             if (Pro->dat[idx[i]].summa < Pro->dat[idx[j]].summa) { int t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
-    printf(Cls Cna "## %-*s " Cnu "%*s " Cnu "%%🔥 " Cnu "%%💰 " Cnu "🏁 " Cnu "%*s\n",
-           Pro->FMN + 2, "📦", Pro->FMP, " 💸", Pro->FMT, "∑");
+    printf(Cls Cna "   %-*s " Cnu "%*s " Cnu "%*s\n", Pro->FMN + 2, "📋", Pro->FMP, " 📊", Pro->FMT, " ⚖️ ");
     for (i = 0; i < Pro->count; i++) {
-        int k = idx[i];
-        if (Pro->dat[k].vis == 0) continue;
-        int avg = Pro->dat[k].summa / Pro->dat[k].tqy;
-        int freq = (Pro->dat[k].tqy * 100) / total_Q;
-        int share = (Pro->dat[k].summa * 100) / total_S;
-        const char* trend = (Pro->dat[k].price > avg) ? Cam "🚩" : (Pro->dat[k].price < avg) ? Cap "🟢" : Cna "🏳️ ";
-        const char* hit = (freq > 25) ? Cap "💎" : (freq < 5) ? Cam "🐌" : "  ";
-        printf(Cnn "%02d " Cna "%-*s " Cnu "%*d " Cna "%2d%% " Cnu "%2d%% " "%s " Cnu "%*d %s\n",
-               i + 1, Pro->FMN + Pro->dat[k].FCN, Pro->dat[k].name,
-               Pro->FMP, avg, freq, share, trend, Pro->FMT, Pro->dat[k].tqy, hit); }
-    int infl = ((today_S - total_S) * 100) / total_S;
-    printf(Cna "\n🏦 " Cnu "🛒%d " Cna "💳" Cap "%d\n", total_V, total_S);
-    printf(Cnu "🧐 " "%s%s " Cnu "%d (" "%s%+d%%" Cnu ")\n", 
-           (infl > 0) ? Cam "📈" : Cap "📉", (infl > 0) ? "😱" : "😎", today_S, 
-           (infl > 0) ? Cam : Cap, infl);
-    os_free(idx);
+        k = idx[i]; if (Pro->dat[k].tqy == 0 || Pro->MaxV == 0 || Pro->dat[k].summa == 0) continue;
+        avg = Pro->dat[k].summa / Pro->dat[k].tqy;
+        vp = (Pro->dat[k].tqy * 100) / Pro->MaxV; vv = (Pro->dat[k].price * 100) / avg;
+        if (vp > 74) rp += Pro->dat[k].price;
+        const char* trend = (Pro->dat[k].price > avg) ? Cam "💸 " : (Pro->dat[k].price < avg) ? Cap "🤝 " : Cna "  ";
+        const char* vs = (vv < 96) ? Cap : (vv > 104) ? Cam : Cnu;
+        const char* vi = (vp > 74) ? Cap : (vp < 33) ? Cam : Cnu;     
+        printf(Cnn "%02d " Cna "%-*s %s%*d %s%3d%% %s\n",
+               i + 1, Pro->FMN + Pro->dat[k].FCN, Pro->dat[k].name, vs, Pro->FMP, avg, vi, vp, trend); }
+    os_free(idx); vv = ((today_S - total_S) * 100) / total_S;
+    printf(Cna "\n🏦 🛒 %d 🎯 %d" Cnu "\n        💳 %d ", Pro->MaxV, rp, total_S); fflush(stdout);
+    if (vv != 0) printf("%s %d" Cnu " (%s%+d %+d%%" Cnu ")\n", (vv > 0) ? Cam "📈" : Cap "📉", today_S, (vv > 0) ? Cam : Cap, today_S - total_S, vv);
     while (1) {
         delay_ms(60);
         const char* k = GetKey();
@@ -348,10 +341,8 @@ void Products(Dic* Pro) {
                                 IN.col = -1; }
                             continue;
                  case K_UP: Analitics(Pro); num = -1; continue;
-                case K_ESC: printf(LCur Cce); fflush(stdout); SaveDic(Pro, DBase); SaveDic(Pro,DAn); SaveDic(Pro,DRep); tmp = 0; 
-                            for (int i = 0; i < Pro->count; i++) if (Pro->dat[i].qy > 0) tmp += Pro->dat[i].price * Pro->dat[i].qy;
-                            if (tmp) { printf(Cnu "%d", tmp); fflush(stdout); }
-                            if (flag) SendMailSecure(DSend,DRep);
+                case K_ESC: printf(LCur Cce); fflush(stdout); tmp = SaveDic(Pro, DBase); tmp = SaveDic(Pro,DAn); tmp = SaveDic(Pro,DRep);
+                            if (tmp) { printf(Cnu "%d", tmp); fflush(stdout); if (flag) SendMailSecure(DSend,DRep); }
                             SetInputMode(0); printf(ShCur); ClearDic(Pro); return;
                 case K_BAC:
                 case K_DEL: if (Pnum) { 
@@ -374,7 +365,7 @@ void Products(Dic* Pro) {
 
 void help() {
     printf(Cnn "Created by " Cna "Alexey Pozdnyakov" Cnn " in " Cna "01.2026" Cnn 
-           " version " Cna "1.02" Cnn ", email " Cna "avp70ru@mail.ru" Cnn 
+           " version " Cna "1.31" Cnn ", email " Cna "avp70ru@mail.ru" Cnn 
            " github " Cna "https://github.com/AVPscan" Cnn "\n"); }
 
 int main(int argc, char *argv[]) {

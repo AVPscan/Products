@@ -1,5 +1,14 @@
+#* 
+#* Программа на C11
+#* Автор: Поздняков Алексей Васильевич
+#* Email: avp70ru@mail.ru
+#* 
+#* Copyright (c) 2026 Алексей Поздняков
+#* Лицензия: GPLv3
+#*
+ 
 CC ?= gcc
-TARGET = products
+TARGET = продукты
 # Определяем ОС: Windows_NT — это стандартная переменная окружения в Win
 ifeq ($(OS),Windows_NT)
     SYS_SRC = sys_windows.c

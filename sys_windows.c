@@ -1,3 +1,12 @@
+/* 
+ * Программа на C11
+ * Автор: Поздняков Алексей Васильевич
+ * Email: avp70ru@mail.ru
+ * 
+ * Copyright (c) 2026 Алексей Поздняков
+ * Лицензия: GPLv3
+ */
+ 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdio.h>

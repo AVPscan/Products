@@ -1,3 +1,12 @@
+/* 
+ * Программа на C11
+ * Автор: Поздняков Алексей Васильевич
+ * Email: avp70ru@mail.ru
+ * 
+ * Copyright (c) 2026 Алексей Поздняков
+ * Лицензия: GPLv3
+ */
+ 
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>      // Для fopen, fread, vfprintf, FILE
 #include <stdlib.h>     // Для malloc, realloc, free
