@@ -179,33 +179,31 @@ int LoadDic(Dic* Pro, const char* filename) {
     return f; }
     
 int SaveDic(Dic* Pro, const char* filename) {
-    int k, j = 0, i = (strcmp(filename, DBase) == 0) ? 0 : 
+    int k,s,n, i = (strcmp(filename, DBase) == 0) ? 0 : 
                       (strncmp(filename, "rep", 3) == 0) ? 1 : 
                       (strncmp(filename, "ana", 3) == 0) ? 2 : 3;
-    for (k = 0; k < Pro->count ; k++) {
-        if (i == 0) j += Pro->dat[k].price;
-        else if (i == 1 && Pro->dat[k].qy > 0) j += Pro->dat[k].price * Pro->dat[k].qy;
-               else if (i == 2 && Pro->dat[k].summa > 0) j += Pro->dat[k].summa; }
-    Pro->Fsum[i] = j;
+    if (i == 3) return 0;
     void* f = os_create_file(filename); 
-    for (j = 0, k = 0; k < Pro->count ; k++) {
-        if (i ==0) os_print_file(f, "%*d %s\n", Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name)); 
-        else if (i == 1 && Pro->dat[k].qy > 0) os_print_file(f, "%02d %2d %*d %s\n", ++j, Pro->dat[k].qy, Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name));
-               else if (i == 2 && Pro->dat[k].summa > 0) os_print_file(f, "%*d %*d %*d %s\n", Pro->FMV, Pro->dat[k].vis, Pro->FMT, Pro->dat[k].tqy, 
-                                                                            Pro->FMS, Pro->dat[k].summa, STU(Pro->dat[k].name)); }
-    os_print_file(f, "%d\n", Pro->Fsum[i]); os_close_file(f); return Pro->Fsum[i]; }
+    for (k = 0, s = 0, n = 0; k < Pro->count ; k++) {
+        if (i ==0) { s += Pro->dat[k].price; os_print_file(f, "%*d %s\n", Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name)); }
+        else if (i == 1 && Pro->dat[k].qy > 0) { s += Pro->dat[k].price * Pro->dat[k].qy;
+                    os_print_file(f, "%02d %2d %*d %s\n", ++n, Pro->dat[k].qy, Pro->FMP, Pro->dat[k].price, STU(Pro->dat[k].name)); }
+             else if (i == 2 && Pro->dat[k].summa > 0) { s += Pro->dat[k].summa;
+                          os_print_file(f, "%*d %*d %*d %s\n", Pro->FMV, Pro->dat[k].vis, Pro->FMT, Pro->dat[k].tqy, Pro->FMS,
+                                            Pro->dat[k].summa, STU(Pro->dat[k].name)); } }
+    Pro->Fsum[i] = s; os_print_file(f, "%d\n", s); os_close_file(f); return Pro->Fsum[i]; }
 
 int PrintDic(Dic* Pro) {
-    int count = 0;
+    int n = 0;
     for (int i = 0; i < Pro->count; i++) { 
         if (Pro->dat[i].qy < 1) continue;
-        printf(Cnn "%02d ", ++count);
+        printf(Cnn "%02d ", ++n);
         if (Pro->dat[i].qy > 1) printf(Cnu "%2d ", Pro->dat[i].qy);
         else printf("   ");
         printf(Cnu "%*d " Cna "%-*s\n", 
                Pro->FMP, Pro->dat[i].price, 
                Pro->FMN + Pro->dat[i].FCN, Pro->dat[i].name); }
-    return count; }
+    return n; }
 
 void Analitics(Dic* Pro) {
     if (!Pro || Pro->count <= 0) return;
@@ -224,14 +222,14 @@ void Analitics(Dic* Pro) {
         k = idx[i]; if (Pro->dat[k].tqy == 0 || Pro->MaxV == 0 || Pro->dat[k].summa == 0) continue;
         avg = Pro->dat[k].summa / Pro->dat[k].tqy;
         vp = (Pro->dat[k].tqy * 100) / Pro->MaxV; vv = (Pro->dat[k].price * 100) / avg;
-        if (vp > 74) rp += Pro->dat[k].price;
+        if (vp > 74) rp += (vp / 100) * Pro->dat[k].price;
         const char* trend = (Pro->dat[k].price > avg) ? Cam "💸 " : (Pro->dat[k].price < avg) ? Cap "🤝 " : Cna "  ";
         const char* vs = (vv < 96) ? Cap : (vv > 104) ? Cam : Cnu;
         const char* vi = (vp > 74) ? Cap : (vp < 33) ? Cam : Cnu;     
         printf(Cnn "%02d " Cna "%-*s %s%*d %s%3d%% %s\n",
                i + 1, Pro->FMN + Pro->dat[k].FCN, Pro->dat[k].name, vs, Pro->FMP, avg, vi, vp, trend); }
     os_free(idx); vv = ((today_S - total_S) * 100) / total_S;
-    printf(Cna "\n🏦 🛒 %d 🎯 %d" Cnu "\n        💳 %d ", Pro->MaxV, rp, total_S); fflush(stdout);
+    printf(Cna "\n🏦 🛒 %d 🔮 %d" Cnu "\n        💳 %d ", Pro->MaxV, rp, total_S); fflush(stdout);
     if (vv != 0) printf("%s %d" Cnu " (%s%+d %+d%%" Cnu ")\n", (vv > 0) ? Cam "📈" : Cap "📉", today_S, (vv > 0) ? Cam : Cap, today_S - total_S, vv);
     while (1) {
         delay_ms(60);
