@@ -1,21 +1,19 @@
-#* 
-#* Программа на C11
-#* Автор: Поздняков Алексей Васильевич
-#* Email: avp70ru@mail.ru
-#* 
-#* Copyright (c) 2026 Алексей Поздняков
-#* Лицензия: GPLv3
-#*
- 
+#
+# Copyright (C) 2026 Поздняков Алексей Васильевич
+# E-mail: avp70ru@mail.ru
+# 
+# Данная программа является свободным программным обеспечением: вы можете 
+# распространять ее и/или изменять согласно условиям Стандартной общественной 
+# лицензии GNU (GPLv3).
+#
+
 CC ?= gcc
-TARGET = продукты
-# Определяем ОС: Windows_NT — это стандартная переменная окружения в Win
+TARGET = products
+
 ifeq ($(OS),Windows_NT)
     SYS_SRC = sys_windows.c
     EXT = .exe
-    # Библиотеки для WinAPI
     LIBS = -lkernel32 -luser32
-    # В Windows stat -c%s не работает, используем wc
     GET_SIZE = wc -c < $(TARGET)$(EXT)
 else
     SYS_SRC = sys_linux.c
@@ -28,13 +26,13 @@ SOURCES = products.c $(SYS_SRC)
 
 # Базовые флаги
 BASE_CFLAGS = -std=c11 -Os -DNDEBUG -Wall -Wextra
-ifndef ($(OS),Windows_NT)
+ifneq ($(OS),Windows_NT)
     BASE_CFLAGS += -D_POSIX_C_SOURCE=200809L
 endif
 
+# Флаги линковки для максимального сжатия
 BASE_LDFLAGS = -flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none $(LIBS)
 
-# Флаги для tiny версии
 CFLAGS_TINY = $(BASE_CFLAGS) \
               -ffunction-sections -fdata-sections \
               -fno-unwind-tables -fno-asynchronous-unwind-tables \
@@ -45,14 +43,13 @@ ifneq ($(OS),Windows_NT)
     LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
 endif
 
-.PHONY: all tiny clean run size analyze help g c
+.PHONY: all tiny clean run size help g c
 
 all: tiny
 
 tiny: $(SOURCES)
-	@echo "🎯 Цель: минимальный бинарник ($(SYS_SRC))..."
-	$(CC) $(CFLAGS_TINY) -o $(TARGET)$(EXT) $(SOURCES) $(LDFLAGS_TINY)
-	@# Strip для Linux (в Windows gcc делает это сам при -s)
+	@echo "🎯 Сборка: $(SYS_SRC) -> $(TARGET)$(EXT)"
+	@$(CC) $(CFLAGS_TINY) -o $(TARGET)$(EXT) $(SOURCES) $(LDFLAGS_TINY)
 	@if [ "$(OS)" != "Windows_NT" ]; then \
 	    strip --strip-all --remove-section=.note.gnu.build-id \
 	          --remove-section=.note.ABI-tag \
@@ -69,22 +66,22 @@ c: tiny
 
 size:
 	@SIZE=$$($(GET_SIZE) 2>/dev/null || echo 0); \
-	echo "📏 Размер: $$SIZE байт"; \
+	echo "📏 Размер бинарника: $$SIZE байт"; \
 	TARGET_SIZE=27000; \
 	if [ $$SIZE -le $$TARGET_SIZE ] && [ $$SIZE -gt 0 ]; then \
-	    echo "✅ мы сделали это однако"; \
+	    echo "✅ Лимит выдержан (до 27КБ)"; \
 	elif [ $$SIZE -gt 0 ]; then \
-	    echo "⚠️  Размер: $$SIZE байт (превышение на $$((SIZE - TARGET_SIZE)))"; \
+	    echo "⚠️  Превышение на $$((SIZE - TARGET_SIZE)) байт"; \
 	fi
 
 clean:
-	rm -f $(TARGET) $(TARGET).exe *.o
+	rm -f $(TARGET) $(TARGET).exe
 	@echo "🧹 Очищено"
 
 run: tiny
 	./$(TARGET)$(EXT)
 
 help:
-	@echo "ОС: $(OS) (Файл: $(SYS_SRC))"
-	@echo "Доступные цели: tiny, g, c, clean, run"
+	@echo "Система: $(OS) | Модуль: $(SYS_SRC)"
+	@echo "Цели: tiny (default), g (gcc), c (clang), run, clean"
 
