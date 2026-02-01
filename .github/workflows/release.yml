@@ -1,83 +1,95 @@
-name: Automatic Release Build
+name: Release Executables
 
+# Триггер 1: При создании тега/релиза (с компа)
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*' # Запускается для тегов, начинающихся с 'v'
+
+# Триггер 2: Ручной запуск (через веб)
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.31)'
+        required: true
+        type: string
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        # Продолжаем, даже если одна из ОС падает
-        fail-fast: false 
-
+    # Эта задача собирает оба файла
+    runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.get_version.outputs.version }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # Устанавливаем MinGW только для Windows
-      - name: Set up MinGW on Windows
-        if: matrix.os == 'windows-latest'
-        uses: egor-tensin/setup-mingw@v1
-        with:
-          platform: x64
-
-      # Шаг сборки для Linux
-      - name: Build Linux Project
-        if: matrix.os == 'ubuntu-latest'
-        # Используем стандартный shell (sh), как ваш makefile ожидает
-        run: make
-
-      # Шаг сборки для Windows
-      - name: Build Windows Project
-        if: matrix.os == 'windows-latest'
-        # Используем bash, как ваш makefile ожидает
-        run: make OS=Windows_NT
-        shell: bash
-
-      # --- Упаковка Артефактов ---
-      - name: Rename and Archive Artifact
-        id: archive_step 
+      - uses: actions/checkout@v4
+      # Определяем версию из тега ИЛИ из ручного ввода
+      - id: get_version
         run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            zip windows_release.zip продукты.exe
-            echo "::set-output name=artifact_name::windows_release.zip"
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           else
-            zip linux_release.zip продукты
-            echo "::set-output name=artifact_name::linux_release.zip"
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
           fi
-        # Примечание: "::set-output" устарел, но пока работает
-        
-      - uses: actions/upload-artifact@v4
+      - name: Build Linux Executable
+        run: make
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.archive_step.outputs.artifact_name }}
-          path: ${{ steps.archive_step.outputs.artifact_name }}
+          name: linux-executable
+          path: products # Замените 'products' на имя вашего исполняемого файла для Linux
 
+      - name: Build Windows Executable
+        # Примечание: Для сборки под Windows обычно нужен отдельный раннер/задача
+        # Простой способ: используем кросс-компиляцию, если makefile это поддерживает.
+        # Если нет, этот шаг сложнее. Допустим, ваш makefile справляется:
+        run: make OS=Windows_NT
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-executable
+          path: products.exe # Замените 'products.exe' на имя вашего исполняемого файла для Windows
 
-  create-release:
+  release:
+    # Эта задача выполняется ТОЛЬКО после успешной сборки
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download Artifacts
+      - name: Download Linux Executable
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
-
-      # --- Создание Релиза ---
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+          name: linux-executable
+      - name: Download Windows Executable
+        uses: actions/download-artifact@v4
         with:
-          files: |
-            artifacts/linux_release.zip/linux_release.zip
-            artifacts/windows_release.zip/windows_release.zip
-          name: Release ${{ github.ref_name }} 
-          body: |
-            # Release Notes v1.31
-            Automatic build of version ${{ github.ref_name }}.
-            Cross-platform compatibility for Windows and Linux.
+          name: windows-executable
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Токен для доступа к API
+        with:
+          tag_name: v${{ needs.build.outputs.release_version }}
+          release_name: Release v${{ needs.build.outputs.release_version }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Linux Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./products # Путь к скачанному артефакту
+          asset_name: AVPscan-Linux-${{ needs.build.outputs.release_version }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./products.exe # Путь к скачанному артефакту
+          asset_name: AVPscan-Windows-${{ needs.build.outputs.release_version }}.exe
+          asset_content_type: application/octet-stream
