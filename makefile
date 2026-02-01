@@ -68,15 +68,8 @@ c: tiny
 musl: g-musl
 
 g-musl: 
-	@if command -v x86_64-linux-musl-gcc >/dev/null; then \
-		# Используем кросс-компилятор Ubuntu
-	    $(MAKE) tiny CC=x86_64-linux-musl-gcc LDFLAGS_TINY+='-static'; \
-	elif command -v gcc >/dev/null && ! command -v ldd >/dev/null; then \
-		# Условие для Alpine Linux
-	    $(MAKE) tiny CC=gcc LDFLAGS_TINY+='-static'; \
-	else \
-		echo "Ошибка: Не найден musl-компилятор или окружение не подходит."; exit 1; \
-	fi
+	# ИСПРАВЛЕНИЕ: Многострочный скрипт объединен в одну логическую команду с escape-символами
+	@if command -v x86_64-linux-musl-gcc >/dev/null; then $(MAKE) tiny CC=x86_64-linux-musl-gcc LDFLAGS_TINY+='-static'; elif command -v gcc >/dev/null && ! command -v ldd >/dev/null; then $(MAKE) tiny CC=gcc LDFLAGS_TINY+='-static'; else echo "Ошибка: Не найден musl-компилятор или окружение не подходит."; exit 1; fi
 
 size:
 	@SIZE=$$($(GET_SIZE) 2>/dev/null || echo 0); \
