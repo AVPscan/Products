@@ -65,9 +65,26 @@ jobs:
           name: windows-executable
           path: products.exe 
 
-  # Задача 3: Создание релиза и прикрепление артефактов
+  # Задача 3: Сборка исполняемого файла для macOS (используя make mac)
+  build-macos:
+    runs-on: macos-latest 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run make mac
+        # Использует make mac цель из вашего Makefile
+        run: make mac
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-executable
+          path: products 
+
+  # Задача 4: Создание релиза и прикрепление артефактов
   create-release:
-    needs: [build-linux, build-windows]
+    needs: [build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
     outputs:
       release_version: ${{ steps.get_version.outputs.version }}
@@ -89,25 +106,26 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: windows-executable
+      - name: Download macOS Executable
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-executable
 
       - name: Create Release
         id: create_release
-        # Используем gh CLI для генерации заметок о коммитах и публикации
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Устанавливаем версию релиза
           TAG_NAME="v${{ steps.get_version.outputs.version }}"
           RELEASE_NAME="Release v${{ steps.get_version.outputs.version }}"
           
-          # Создаем релиз: публикуется сразу (--draft отсутствует), генерирует заметки (--generate-notes) и помечается как последний (--latest)
+          # Создаем релиз: публикуется сразу, генерирует заметки, помечается как последний
           gh release create "$TAG_NAME" \
             --repo="$GITHUB_REPOSITORY" \
             --title="$RELEASE_NAME" \
             --generate-notes \
             --latest
             
-          # Получаем URL для загрузки ассетов из созданного релиза в переменную окружения UPLOAD_URL
           echo "UPLOAD_URL=$(gh release view "$TAG_NAME" --repo="$GITHUB_REPOSITORY" --json uploadUrl -q .uploadUrl)" >> $GITHUB_ENV
 
       - name: Upload Linux Release Asset
@@ -117,7 +135,7 @@ jobs:
         with:
           upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./products
-          asset_name: products-v${{ steps.get_version.outputs.version }}
+          asset_name: products-Linux-v${{ steps.get_version.outputs.version }}
           asset_content_type: application/octet-stream
 
       - name: Upload Windows Release Asset
@@ -127,7 +145,15 @@ jobs:
         with:
           upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./products.exe
-          asset_name: products-v${{ steps.get_version.outputs.version }}.exe
+          asset_name: products-Windows-v${{ steps.get_version.outputs.version }}.exe
           asset_content_type: application/octet-stream
-
-
+          
+      - name: Upload macOS Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ env.UPLOAD_URL }}
+          asset_path: ./products
+          asset_name: products-macOS-v${{ steps.get_version.outputs.version }}
+          asset_content_type: application/octet-stream
