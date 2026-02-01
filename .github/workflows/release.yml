@@ -1,0 +1,45 @@
+name: Automatic Release Build
+
+on:
+  # Запускать скрипт только тогда, когда в репозиторий отправляется git-тег (например, v1.31)
+  push:
+    tags:
+      - 'v*' # Любой тег, начинающийся с буквы 'v'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --- Сборка Linux ---
+      - name: Build Linux Binary
+        run: make
+
+      # --- Сборка Windows ---
+      - name: Build Windows Binary
+        run: make OS=Windows_NT
+        shell: bash
+
+      # --- Упаковка Артефактов ---
+      - name: Archive Linux Artifact
+        run: zip linux_release.zip продукты
+      
+      - name: Archive Windows Artifact
+        run: zip windows_release.zip продукты.exe
+
+      # --- Создание Релиза ---
+      # Этот шаг использует внешний Action для автоматической публикации релиза
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            linux_release.zip
+            windows_release.zip
+          # Имя релиза будет точно соответствовать вашему тегу, например "v1.31"
+          name: Release ${{ github.ref_name }} 
+          body: |
+            # Release Notes
+            Automatic build of version ${{ github.ref_name }}.
+            Cross-platform compatibility for Windows and Linux.
