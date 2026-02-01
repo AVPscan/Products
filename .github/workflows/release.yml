@@ -1,4 +1,4 @@
-name: Release Executables (Cross-Platform)
+name: Linux musl static +(Cross-Platform)
 
 # Внимание: Разрешение на запись необходимо для создания релиза и загрузки файлов
 permissions:
