@@ -44,16 +44,8 @@ ifneq ($(OS),Windows_NT)
 	endif
 endif
 
-# Флаги линковки (Базовые, совместимые)
-BASE_LDFLAGS = -flto $(LIBS)
-
-# Добавляем специфичные для GNU/Linux флаги, если ОС не Windows и не Darwin
-ifneq ($(OS),Windows_NT)
-	ifeq ($(UNAME_S),Linux)
-		BASE_LDFLAGS += -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none
-	endif
-endif
-
+# Флаги линковки
+BASE_LDFLAGS = -flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none $(LIBS)
 
 CFLAGS_TINY = $(BASE_CFLAGS) \
 			  -ffunction-sections -fdata-sections \
@@ -62,10 +54,7 @@ CFLAGS_TINY = $(BASE_CFLAGS) \
 
 LDFLAGS_TINY = $(BASE_LDFLAGS)
 ifneq ($(OS),Windows_NT)
-	# Эти флаги специфичны для линкера GNU ld (Linux), не сработают на macOS/Darwin
-	ifeq ($(UNAME_S),Linux)
-		LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
-	endif
+	LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
 endif
 
 .PHONY: all tiny clean run size help g c musl g-musl
