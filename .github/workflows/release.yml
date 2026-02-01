@@ -27,7 +27,7 @@ jobs:
         # Используем специальный action для работы в контейнере
         uses: actions/checkout@v4
       
-      # ИСПРАВЛЕНО: Используем 'musl' вместо 'musl-libc'
+      # ИСПРАВЛЕНО: Используем 'musl' вместо 'musl-libc' и устанавливаем инструменты сборки
       - name: Install build tools (GCC and make in Alpine)
         run: apk add --no-cache gcc make musl
 
@@ -38,12 +38,12 @@ jobs:
           SOURCES="products.c sys_linux.c"
           TARGET="products"
           
-          # Ваши CFLAGS_TINY из makefile (теперь используем стандартный синтаксис)
+          # Ваши CFLAGS_TINY из makefile (ИСПРАВЛЕННЫЙ СИНТАКСИС КОНКАТЕНАЦИИ)
           CFLAGS="-std=c11 -Os -DNDEBUG -Wall -Wextra -D_POSIX_C_SOURCE=200809L"
           CFLAGS="$CFLAGS -ffunction-sections -fdata-sections -fno-unwind-tables"
           CFLAGS="$CFLAGS -fno-asynchronous-unwind-tables -fno-ident -fomit-frame-pointer"
           
-          # Ваши LDFLAGS_TINY из makefile + принудительная статика и strip-команды
+          # Ваши LDFLAGS_TINY из makefile (ИСПРАВЛЕННЫЙ СИНТАКСИС КОНКАТЕНАЦИИ)
           LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
           LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs"
           
