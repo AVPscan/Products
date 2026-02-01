@@ -10,5 +10,5 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Run make
-        run: make
+      - name: Run make mac
+        run: make mac
