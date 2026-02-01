@@ -228,51 +228,62 @@ void SetInputMode(int raw) {
         SetConsoleMode(hOut, oldModeOut); } }
 
 const char* GetKey(void) {
-    static char b; 
+    static char b[5]; 
     os_memset(b, 0, sizeof(b));
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     INPUT_RECORD ir;
     DWORD read;
     PeekConsoleInputA(hIn, &ir, 1, &read);
-    if (read == 0) { b = 27; return b; }
+    if (read == 0) { 
+        b[0] = 27; 
+        return b;
+    }
     ReadConsoleInputA(hIn, &ir, 1, &read);
-    if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown) { b = 27; return b; }
+    if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown) { 
+        b[0] = 27; 
+        return b; 
+    }
     WORD vk = ir.Event.KeyEvent.wVirtualKeyCode;
     char ch = ir.Event.KeyEvent.uChar.AsciiChar;
-    if (ch >= 32 && ch <= 126) { b = ch; return b; }
-    b = 27; 
+    if (ch >= 32 && ch <= 126) { 
+        b[0] = ch; 
+        return b; 
+    }
+    b[0] = 27; 
     switch (vk) {
-        case VK_UP:     b = K_UP;  break;
-        case VK_DOWN:   b = K_DOW; break;
-        case VK_LEFT:   b = K_LEF; break;
-        case VK_RIGHT:  b = K_RIG; break;
-        case VK_RETURN: b = K_ENT; break;
-        case VK_BACK:   b = K_BAC; break;
-        case VK_TAB:    b = K_TAB; break;
-        case VK_ESCAPE: b = K_ESC; break;
-        case VK_SPACE:  b = K_SPA; break;
-        case VK_DELETE: b = K_DEL; break;
-        case VK_PRIOR:  b = K_PUP; break;
-        case VK_NEXT:   b = K_PDN; break;
-        case VK_HOME:   b = K_HOM; break;
-        case VK_END:    b = K_END; break;
-        case VK_F1:     b = K_F1;  break;
-        case VK_F2:     b = K_F2;  break;
-        case VK_F3:     b = K_F3;  break;
-        case VK_F4:     b = K_F4;  break;
-        case VK_F5:     b = K_F5;  break;
-        case VK_F6:     b = K_F6;  break;
-        case VK_F7:     b = K_F7;  break;
-        case VK_F8:     b = K_F8;  break;
-        case VK_F9:     b = K_F9;  break;
-        case VK_F10:    b = K_F10; break;
-        case VK_F11:    b = K_F11; break;
-        case VK_F12:    b = K_F12; break;
+        case VK_UP:     b[0] = K_UP;  break;
+        case VK_DOWN:   b[0] = K_DOW; break;
+        case VK_LEFT:   b[0] = K_LEF; break;
+        case VK_RIGHT:  b[0] = K_RIG; break;
+        case VK_RETURN: b[0] = K_ENT; break;
+        case VK_BACK:   b[0] = K_BAC; break;
+        case VK_TAB:    b[0] = K_TAB; break;
+        case VK_ESCAPE: b[0] = K_ESC; break;
+        case VK_SPACE:  b[0] = K_SPA; break;
+        case VK_DELETE: b[0] = K_DEL; break;
+        case VK_PRIOR:  b[0] = K_PUP; break;
+        case VK_NEXT:   b[0] = K_PDN; break;
+        case VK_HOME:   b[0] = K_HOM; break;
+        case VK_END:    b[0] = K_END; break;
+        case VK_F1:     b[0] = K_F1;  break;
+        case VK_F2:     b[0] = K_F2;  break;
+        case VK_F3:     b[0] = K_F3;  break;
+        case VK_F4:     b[0] = K_F4;  break;
+        case VK_F5:     b[0] = K_F5;  break;
+        case VK_F6:     b[0] = K_F6;  break;
+        case VK_F7:     b[0] = K_F7;  break;
+        case VK_F8:     b[0] = K_F8;  break;
+        case VK_F9:     b[0] = K_F9;  break;
+        case VK_F10:    b[0] = K_F10; break;
+        case VK_F11:    b[0] = K_F11; break;
+        case VK_F12:    b[0] = K_F12; break;
         default:
-            if (ch == 3) b = K_CRC;
-            else b = 0;
+            if (ch == 3) b[0] = K_CRC;
+            else b[0] = 0;
             break; }
-    return b; }
+    return b; 
+}
+
 
 // === Отправка почты (Windows curl) ===
 
