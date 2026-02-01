@@ -27,13 +27,13 @@ jobs:
         # Используем специальный action для работы в контейнере
         uses: actions/checkout@v4
       
+      # ИСПРАВЛЕНО: Используем пакет 'build-base', который включает все необходимое
       - name: Install build tools (GCC, make, and musl in Alpine)
-        # Используем пакет 'build-base', который включает gcc, make, musl-dev и libc-dev
         run: apk add --no-cache build-base musl binutils
 
       - name: Compile with musl-gcc (bypassing makefile)
         run: |
-          # Все библиотеки в Alpine по умолчанию MUSL
+          # Определяем переменные для компиляции
           CC_MUSL="gcc"
           SOURCES="products.c sys_linux.c"
           TARGET="products"
@@ -43,14 +43,14 @@ jobs:
           CFLAGS="$CFLAGS -ffunction-sections -fdata-sections -fno-unwind-tables"
           CFLAGS="$CFLAGS -fno-asynchronous-unwind-tables -fno-ident -fomit-frame-pointer"
           
-          # Ваши LDFLAGS_TINY из makefile (ИСПРАВЛЕННЫЙ СИНТАКСИС БЕЗ +=)
+          # Ваши LDFLAGS_TINY из makefile + принудительная статика (-static)
           LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
-          LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs"
-          
-          # Выполняем компиляцию напрямую (gcc в Alpine линкует статически по умолчанию)
+          LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs -static" # <- ФЛАГ -static добавлен
+
+          # Выполняем компиляцию напрямую
           $CC_MUSL $CFLAGS -o $TARGET $SOURCES $LDFLAGS
           
-          # Выполняем strip-оптимизацию, как в вашем makefile
+          # Выполняем strip-оптимизацию
           strip --strip-all $TARGET
 
       - name: Upload Linux Artifact
@@ -58,6 +58,7 @@ jobs:
         with:
           name: linux-executable
           path: products
+
 
   # Задача 2: Сборка исполняемого файла для Windows (стандартная)
   build-windows:
