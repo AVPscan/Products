@@ -21,4 +21,3 @@ jobs:
         run: |
           # В Windows на GitHub по умолчанию стоит gcc (MinGW)
           make OS=Windows_NT
-
