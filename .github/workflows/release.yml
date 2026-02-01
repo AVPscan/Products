@@ -23,18 +23,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Install musl-tools (for static linking)
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      # Устанавливаем кросс-компилятор MUSL на ранере Ubuntu
+      - name: Install musl-tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools build-essential
 
-      - name: Run make (static musl build)
-        # Принудительно используем musl-gcc и добавляем флаг статической линковки
-        run: make CC=musl-gcc LDFLAGS_TINY+='-static'
+      - name: Compile with musl-gcc (bypassing makefile)
+        run: |
+          # Определяем переменные для компиляции
+          CC_MUSL="x86_64-linux-musl-gcc"
+          SOURCES="products.c sys_linux.c"
+          TARGET="products"
+          
+          # Ваши CFLAGS_TINY из makefile
+          CFLAGS="-std=c11 -Os -DNDEBUG -Wall -Wextra -D_POSIX_C_SOURCE=200809L"
+          CFLAGS+=" -ffunction-sections -fdata-sections -fno-unwind-tables"
+          CFLAGS+=" -fno-asynchronous-unwind-tables -fno-ident -fomit-frame-pointer"
+          
+          # Ваши LDFLAGS_TINY из makefile + принудительная статика и strip-команды
+          LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
+          LDFLAGS+=" -static -Wl,-z,pack-relative-relocs"
+          
+          # Выполняем компиляцию напрямую
+          $CC_MUSL $CFLAGS -o $TARGET $SOURCES $LDFLAGS
+          
+          # Выполняем strip-оптимизацию, как в вашем makefile
+          strip --strip-all --remove-section=.note.gnu.build-id \
+                --remove-section=.note.ABI-tag \
+                --remove-section=.comment $TARGET 2>/dev/null || true
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-executable
-          path: products # Замените 'products' на имя вашего исполняемого файла
+          path: products
 
   # Задача 2: Сборка исполняемого файла для Windows (стандартная)
   build-windows:
