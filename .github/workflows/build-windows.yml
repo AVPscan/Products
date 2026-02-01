@@ -1,0 +1,13 @@
+name: Build on Windows
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run make OS=Windows_NT
+        shell: bash
+        run: make OS=Windows_NT
+        
