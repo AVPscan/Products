@@ -38,14 +38,14 @@ jobs:
           SOURCES="products.c sys_linux.c"
           TARGET="products"
           
-          # Ваши CFLAGS_TINY из makefile
+          # Ваши CFLAGS_TINY из makefile (теперь используем стандартный синтаксис)
           CFLAGS="-std=c11 -Os -DNDEBUG -Wall -Wextra -D_POSIX_C_SOURCE=200809L"
-          CFLAGS+=" -ffunction-sections -fdata-sections -fno-unwind-tables"
-          CFLAGS+=" -fno-asynchronous-unwind-tables -fno-ident -fomit-frame-pointer"
+          CFLAGS="$CFLAGS -ffunction-sections -fdata-sections -fno-unwind-tables"
+          CFLAGS="$CFLAGS -fno-asynchronous-unwind-tables -fno-ident -fomit-frame-pointer"
           
           # Ваши LDFLAGS_TINY из makefile + принудительная статика и strip-команды
           LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
-          LDFLAGS+=" -Wl,-z,pack-relative-relocs"
+          LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs"
           
           # Выполняем компиляцию напрямую
           $CC_MUSL $CFLAGS -o $TARGET $SOURCES $LDFLAGS
