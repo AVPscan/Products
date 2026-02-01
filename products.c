@@ -286,7 +286,7 @@ void Products(Dic* Pro) {
         if (num == -1) {
             printf( Cls Cna ); num = 1 + PrintDic(Pro); printf(SCur); }
         if (cr!=-1) { if (IN.lp == 0) IN.price=Pro->dat[cr].price; }
-        printf(LCur Cnn "%02d " Cnu "%2d " Cnu "%*d " Cna "%s", num, IN.col, Pro->FMP, IN.price, prw(Pro, IN.name, cr)); fflush(stdout);
+        printf(LCur Cnn "%02d " Cnu "%2d " Cnu "%*d " Cna "%s ", num, IN.col, Pro->FMP, IN.price, prw(Pro, IN.name, cr)); fflush(stdout);
         delay_ms(120);
         const char *key = GetKey();
         if (key[0] == 27 && key[1] == 0) { 
