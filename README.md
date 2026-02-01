@@ -1,6 +1,5 @@
 # 🛒 Smart Shopping & Price Analytics / Умные покупки и аналитика цен
-![Linux Build status](https://github.com)
-![Windows Build status](https://github.com)
+[![Build on Linux](https://github.com/AVPscan/Products/actions/workflows/build-linux.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/build-linux.yml)
  
 **Author:** Алексей Васильевич Поздняков (Alexey V. Pozdnyakov)  
 **Email:** avp70ru@mail.ru  
