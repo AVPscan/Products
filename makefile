@@ -43,7 +43,7 @@ ifneq ($(OS),Windows_NT)
     LDFLAGS_TINY += -Wl,-z,pack-relative-relocs
 endif
 
-.PHONY: all tiny clean run size help g c
+.PHONY: all tiny clean run size help g c musl g-musl
 
 all: tiny
 
@@ -64,6 +64,13 @@ c: CC = clang
 c: CFLAGS_TINY += -Oz -fno-stack-protector
 c: tiny
 
+# Новая цель: Статическая сборка MUSL (для GitHub Actions / NixOS)
+musl: g-musl
+
+g-musl: CC = x86_64-linux-musl-gcc
+g-musl: LDFLAGS_TINY += -static
+g-musl: tiny
+
 size:
 	@SIZE=$$($(GET_SIZE) 2>/dev/null || echo 0); \
 	echo "📏 Размер бинарника: $$SIZE байт"; \
@@ -83,5 +90,4 @@ run: tiny
 
 help:
 	@echo "Система: $(OS) | Модуль: $(SYS_SRC)"
-	@echo "Цели: tiny (default), g (gcc), c (clang), run, clean"
-
+	@echo "Цели: tiny (default), g (gcc), c (clang), run, clean, musl (static musl build)"
