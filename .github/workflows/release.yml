@@ -34,7 +34,13 @@ jobs:
       - name: Run make musl
         # Просто вызываем вашу цель make musl, которая теперь умная
         run: make musl
-
+        
+      - name: Check binary status
+        run: |
+          # 'file' покажет "statically linked", 'ldd' покажет "not a dynamic executable"
+          file products
+          ldd products || echo "✅ Статус: Statically linked"
+          
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
