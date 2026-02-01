@@ -15,5 +15,7 @@
 !send.txt
 !.gitignore
 !.github/
+!.github/workflows/
+!.github/workflows/*
 # Игнорировать
 
