@@ -102,14 +102,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: linux-executable
+          path: ./artefacts/linux # Скачиваем в уникальную поддиректорию
       - name: Download Windows Executable
         uses: actions/download-artifact@v4
         with:
           name: windows-executable
+          path: ./artefacts/windows # Скачиваем в уникальную поддиректорию
       - name: Download macOS Executable
         uses: actions/download-artifact@v4
         with:
           name: macos-executable
+          path: ./artefacts/macos # Скачиваем в уникальную поддиректорию
 
       - name: Create Release
         id: create_release
@@ -119,7 +122,6 @@ jobs:
           TAG_NAME="v${{ steps.get_version.outputs.version }}"
           RELEASE_NAME="Release v${{ steps.get_version.outputs.version }}"
           
-          # Создаем релиз: публикуется сразу, генерирует заметки, помечается как последний
           gh release create "$TAG_NAME" \
             --repo="$GITHUB_REPOSITORY" \
             --title="$RELEASE_NAME" \
@@ -134,8 +136,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./products
-          asset_name: products-Linux-v${{ steps.get_version.outputs.version }}
+          asset_path: ./artefacts/linux/products # Указываем путь к файлу в поддиректории
+          asset_name: AVPscan-Linux-v${{ steps.get_version.outputs.version }}
           asset_content_type: application/octet-stream
 
       - name: Upload Windows Release Asset
@@ -144,8 +146,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./products.exe
-          asset_name: products-Windows-v${{ steps.get_version.outputs.version }}.exe
+          asset_path: ./artefacts/windows/products.exe # Указываем путь к файлу в поддиректории
+          asset_name: AVPscan-Windows-v${{ steps.get_version.outputs.version }}.exe
           asset_content_type: application/octet-stream
           
       - name: Upload macOS Release Asset
@@ -154,6 +156,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./products
-          asset_name: products-macOS-v${{ steps.get_version.outputs.version }}
+          asset_path: ./artefacts/macos/products # Указываем путь к файлу в поддиректории
+          asset_name: AVPscan-macOS-v${{ steps.get_version.outputs.version }}
           asset_content_type: application/octet-stream
+
