@@ -54,6 +54,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      # Добавляем экшен для установки конкретной версии MinGW
+      - name: Set up MinGW-w64 (e.g., version 11.2.0, adjust if needed)
+        uses: egor-tensin/setup-mingw@v3
+        with:
+          # Попробуйте начать с версии 11.2.0, она часто дает компактные бинарники. 
+          # Если не поможет, нужно найти ту версию, что давала 30КБ.
+          version: '11.2.0'
+      
       - name: Run make OS=Windows_NT
         shell: bash
         run: make OS=Windows_NT
@@ -62,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-executable
-          path: products.exe # Замените 'products.exe' на имя вашего исполняемого файла
+          path: products.exe 
 
   # Задача 3: Создание релиза и прикрепление артефактов
   create-release:
