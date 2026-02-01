@@ -19,39 +19,18 @@ jobs:
 
   # Задача 1: Сборка исполняемого файла для Linux (статический MUSL)
   build-linux:
-    # Используем чистый контейнер Alpine Linux, где по умолчанию только MUSL
     runs-on: ubuntu-latest
-    container: alpine:latest
     steps:
       - name: Checkout repository
-        # Используем специальный action для работы в контейнере
         uses: actions/checkout@v4
       
-      # ИСПРАВЛЕНО: Используем пакет 'build-base', который включает все необходимое
-      - name: Install build tools (GCC, make, and musl in Alpine)
-        run: apk add --no-cache build-base musl binutils
+      # Устанавливаем кросс-компилятор MUSL на ранере Ubuntu
+      - name: Install musl-tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Compile with musl-gcc (bypassing makefile)
-        run: |
-          # Определяем переменные для компиляции
-          CC_MUSL="gcc"
-          SOURCES="products.c sys_linux.c"
-          TARGET="products"
-          
-          # Ваши CFLAGS_TINY из makefile (ИСПРАВЛЕННЫЙ СИНТАКСИС БЕЗ +=)
-          CFLAGS="-std=c11 -Os -DNDEBUG -Wall -Wextra -D_POSIX_C_SOURCE=200809L"
-          CFLAGS="$CFLAGS -ffunction-sections -fdata-sections -fno-unwind-tables"
-          CFLAGS="$CFLAGS -fno-asynchronous-unwind-tables -fno-ident -fomit-frame-pointer"
-          
-          # Ваши LDFLAGS_TINY из makefile + принудительная статика (-static)
-          LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
-          LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs -static"
-
-          # ИСПРАВЛЕНО: Добавлен флаг -o для указания целевого файла
-          $CC_MUSL $CFLAGS -o $TARGET $SOURCES $LDFLAGS
-          
-          # Выполняем strip-оптимизацию
-          strip --strip-all $TARGET
+      - name: Run make musl
+        # Просто вызываем новую цель make musl, которая знает что делать
+        run: make musl
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
