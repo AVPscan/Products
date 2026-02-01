@@ -27,7 +27,7 @@ jobs:
         # Используем специальный action для работы в контейнере
         uses: actions/checkout@v4
       
-      # Используем пакет 'build-base', который включает все необходимое
+      # ИСПРАВЛЕНО: Используем пакет 'build-base', который включает все необходимое
       - name: Install build tools (GCC, make, and musl in Alpine)
         run: apk add --no-cache build-base musl binutils
 
@@ -47,7 +47,7 @@ jobs:
           LDFLAGS="-flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none"
           LDFLAGS="$LDFLAGS -Wl,-z,pack-relative-relocs -static"
 
-          # Выполняем компиляцию напрямую
+          # ИСПРАВЛЕНО: Добавлен флаг -o для указания целевого файла
           $CC_MUSL $CFLAGS -o $TARGET $SOURCES $LDFLAGS
           
           # Выполняем strip-оптимизацию
