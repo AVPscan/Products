@@ -30,7 +30,7 @@ ifneq ($(OS),Windows_NT)
     BASE_CFLAGS += -D_POSIX_C_SOURCE=200809L
 endif
 
-# Флаги линковки для максимального сжатия
+# Флаги линковки
 BASE_LDFLAGS = -flto -Wl,--gc-sections -Wl,--strip-all -Wl,-s -Wl,--build-id=none $(LIBS)
 
 CFLAGS_TINY = $(BASE_CFLAGS) \
@@ -68,8 +68,10 @@ c: tiny
 musl: g-musl
 
 g-musl: 
-	# Используем GCC по умолчанию и принудительно статическую линковку
-	$(MAKE) tiny LDFLAGS_TINY+='-static'
+	@$(MAKE) tiny \
+	    CC=gcc \
+	    CFLAGS_TINY="$(CFLAGS_TINY) -static" \
+	    LDFLAGS_TINY="$(LDFLAGS_TINY) -static"
 
 size:
 	@SIZE=$$($(GET_SIZE) 2>/dev/null || echo 0); \
