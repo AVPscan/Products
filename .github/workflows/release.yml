@@ -54,16 +54,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      # Добавляем экшен для установки конкретной версии MinGW
-      - name: Set up MinGW-w64 (e.g., version 11.2.0, adjust if needed)
-        uses: egor-tensin/setup-mingw@v3
-        with:
-          # Попробуйте начать с версии 11.2.0, она часто дает компактные бинарники. 
-          # Если не поможет, нужно найти ту версию, что давала 30КБ.
-          version: '11.2.0'
-      
       - name: Run make OS=Windows_NT
         shell: bash
+        # Использует ваш Makefile с фиксацией флагов для Windows
         run: make OS=Windows_NT
         
       - name: Upload Windows Artifact
