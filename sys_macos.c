@@ -132,7 +132,7 @@ KeyIDMap nameid[] = {
 const char* GetKey(void) {
     static char b[6]; char *p = b;
     os_memset(b, 0, sizeof(b));
-    if (read(0, p, 1) <= 0) { *p =27; return b; }
+    if (read(0, p, 1) <= 0) return b;
     unsigned char c = *(unsigned char*)p;
     if (c > 127) {
         int len = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
@@ -141,21 +141,23 @@ const char* GetKey(void) {
     if (c > 32 && c < 127 ) return b;
     *p++ = 27;
     switch (c) {
-         case  3: *p = K_CRC; return b;
-         case  9: *p = K_TAB; return b;
-         case 10: *p = K_ENT; return b;
-         case 32: *p = K_SPA; return b;
+        case  3: *p = K_CRC; return b;
+        case  9: *p = K_TAB; return b;
+        case 10:
+        case 13: *p = K_ENT; return b;
+        case 32: *p = K_SPA; return b;
+        case  8:
         case 127: *p = K_BAC; return b;
-         case 27: {
-                  int i = 0;
-                  while (i < 4 && read(0, p + i, 1) > 0) i++;
-                  if (i == 0) { b[1] = K_ESC; return b; }
-                  for (int j = 0; j < (int)(sizeof(nameid)/sizeof(KeyIDMap)); j++) {
-                      const char *s1 = p, *s2 = nameid[j].name;
-                      while (*s1 && *s1 == *s2) { s1++; s2++; }
-                      if (*s1 == '\0' && *s2 == '\0') { 
-                          *p++ = nameid[j].id; *p = 0; return b; } } }
-         default: *p = 0;   return b; } }        
+        case 27: {
+            int i = 0;
+            while (i < 4 && read(0, p + i, 1) > 0) i++;
+            if (i == 0) { *p = K_ESC; return b; }
+            for (int j = 0; j < (int)(sizeof(nameid)/sizeof(KeyIDMap)); j++) {
+                const char *s1 = p, *s2 = nameid[j].name;
+                while (*s1 && *s1 == *s2) { s1++; s2++; }
+                if (*s1 == '\0' && *s2 == '\0') { 
+                    *p++ = nameid[j].id; *p = 0; return b; } } }
+        default: *p = 0; return b; } }      
 
 // === Рабочая директория (macOS) ===
 unsigned char FileBuf[DBuf+NBuf];
