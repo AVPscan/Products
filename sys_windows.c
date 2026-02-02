@@ -212,77 +212,59 @@ int AutoEncryptOrValidate(const char *fname) {
                 return 0; } } }
     return 2; }
 
-// === Ввод/клавиатура (Windows Console API) ===
-
 void SetInputMode(int raw) {
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     static DWORD oldModeIn, oldModeOut;
     if (raw) {
+        SetConsoleCP(65001);
+        SetConsoleOutputCP(65001);
         GetConsoleMode(hIn, &oldModeIn);
         GetConsoleMode(hOut, &oldModeOut);
-        SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS);
-        SetConsoleMode(hOut, oldModeOut | ENABLE_VIRTUAL_TERMINAL_PROCESSING); }
+        SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS); 
+        SetConsoleMode(hOut, oldModeOut | ENABLE_VIRTUAL_TERMINAL_PROCESSING); } 
     else {
         SetConsoleMode(hIn, oldModeIn);
         SetConsoleMode(hOut, oldModeOut); } }
 
 const char* GetKey(void) {
     static char b[5]; 
-    os_memset(b, 0, sizeof(b));
+    memset(b, 0, sizeof(b));
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     INPUT_RECORD ir;
     DWORD read;
-    PeekConsoleInputA(hIn, &ir, 1, &read);
-    if (read == 0) { 
-        b[0] = 27; 
-        return b;
-    }
-    ReadConsoleInputA(hIn, &ir, 1, &read);
-    if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown) { 
-        b[0] = 27; 
-        return b; 
-    }
+    GetNumberOfConsoleInputEvents(hIn, &read);
+    if (read == 0) return b; 
+    if (!ReadConsoleInputW(hIn, &ir, 1, &read) || read == 0) return b;
+    if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown) return b;
     WORD vk = ir.Event.KeyEvent.wVirtualKeyCode;
-    char ch = ir.Event.KeyEvent.uChar.AsciiChar;
-    if (ch >= 32 && ch <= 126) { 
-        b[0] = ch; 
-        return b; 
-    }
-    b[0] = 27; 
-    switch (vk) {
-        case VK_UP:     b[0] = K_UP;  break;
-        case VK_DOWN:   b[0] = K_DOW; break;
-        case VK_LEFT:   b[0] = K_LEF; break;
-        case VK_RIGHT:  b[0] = K_RIG; break;
-        case VK_RETURN: b[0] = K_ENT; break;
-        case VK_BACK:   b[0] = K_BAC; break;
-        case VK_TAB:    b[0] = K_TAB; break;
-        case VK_ESCAPE: b[0] = K_ESC; break;
-        case VK_SPACE:  b[0] = K_SPA; break;
-        case VK_DELETE: b[0] = K_DEL; break;
-        case VK_PRIOR:  b[0] = K_PUP; break;
-        case VK_NEXT:   b[0] = K_PDN; break;
-        case VK_HOME:   b[0] = K_HOM; break;
-        case VK_END:    b[0] = K_END; break;
-        case VK_F1:     b[0] = K_F1;  break;
-        case VK_F2:     b[0] = K_F2;  break;
-        case VK_F3:     b[0] = K_F3;  break;
-        case VK_F4:     b[0] = K_F4;  break;
-        case VK_F5:     b[0] = K_F5;  break;
-        case VK_F6:     b[0] = K_F6;  break;
-        case VK_F7:     b[0] = K_F7;  break;
-        case VK_F8:     b[0] = K_F8;  break;
-        case VK_F9:     b[0] = K_F9;  break;
-        case VK_F10:    b[0] = K_F10; break;
-        case VK_F11:    b[0] = K_F11; break;
-        case VK_F12:    b[0] = K_F12; break;
-        default:
-            if (ch == 3) b[0] = K_CRC;
-            else b[0] = 0;
-            break; }
-    return b; 
-}
+    WCHAR wc = ir.Event.KeyEvent.uChar.UnicodeChar;
+    if (wc == 3) { b[0] = 27; b[1] = K_CRC; return b; }
+    int cmd = 0;
+    if (vk >= VK_F1 && vk <= VK_F12) cmd = K_F1 + (vk - VK_F1);
+    else {
+        switch (vk) {
+            case VK_ESCAPE: cmd = K_ESC; break;
+            case VK_UP:     cmd = K_UP;  break;
+            case VK_DOWN:   cmd = K_DOW; break;
+            case VK_LEFT:   cmd = K_LEF; break;
+            case VK_RIGHT:  cmd = K_RIG; break;
+            case VK_PRIOR:  cmd = K_PUP; break;
+            case VK_NEXT:   cmd = K_PDN; break;
+            case VK_HOME:   cmd = K_HOM; break;
+            case VK_END:    cmd = K_END; break;
+            case VK_INSERT: cmd = K_INS; break;
+            case VK_DELETE: cmd = K_DEL; break;
+            case VK_RETURN: cmd = K_ENT; break;
+            case VK_BACK:   cmd = K_BAC; break;
+            case VK_TAB:    cmd = K_TAB; break;
+            case VK_SPACE:  cmd = K_SPA; break; } }
+    if (cmd > 0) { b[0] = 27; b[1] = (char)cmd; return b; }
+    if (wc >= 32) {
+        WideCharToMultiByte(CP_UTF8, 0, &wc, 1, b, sizeof(b)-1, NULL, NULL);
+        return b; }
+    b[0] = 27;
+    return b; }
 
 
 // === Отправка почты (Windows curl) ===
