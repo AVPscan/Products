@@ -137,8 +137,10 @@ const char* GetKey(void) {
     switch (c) {
          case  3: *p = K_CRC; return b;
          case  9: *p = K_TAB; return b;
-         case 10: *p = K_ENT; return b;
+         case 10: 
+         case 13: *p = K_ENT; return b;
          case 32: *p = K_SPA; return b;
+         case  8:
         case 127: *p = K_BAC; return b;
          case 27: {
                   int i = 0;
