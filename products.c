@@ -217,20 +217,20 @@ void Analitics(Dic* Pro) {
     for (i = 0; i < Pro->count - 1; i++)
         for (j = i + 1; j < Pro->count; j++)
             if (Pro->dat[idx[i]].summa < Pro->dat[idx[j]].summa) { int t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
-    printf(Cls Cna "   %-*s " Cnu "%*s " Cnu "%*s\n", Pro->FMN + 2, "📋", Pro->FMP, "📊", Pro->FMT, " ⚖️ ");
+    printf(Cls Cna "   %-*s %*s %*s\n", Pro->FMN, " ", Pro->FMP, "  ", Pro->FMT, "<->");
     for (i = 0; i < Pro->count; i++) {
         k = idx[i]; if (Pro->dat[k].tqy == 0 || Pro->MaxV == 0 || Pro->dat[k].summa == 0) continue;
         avg = Pro->dat[k].summa / Pro->dat[k].tqy;
         vp = (Pro->dat[k].tqy * 100) / Pro->MaxV; vv = (Pro->dat[k].price * 100) / avg;
         if (vp > 74) rp += (vp / 100) * Pro->dat[k].price;
-        const char* trend = (Pro->dat[k].price > avg) ? Cam "💸 " : (Pro->dat[k].price < avg) ? Cap "🤝 " : Cna "  ";
+        const char* trend = (Pro->dat[k].price > avg) ? Cam "$" : (Pro->dat[k].price < avg) ? Cap "+" : Cna " ";
         const char* vs = (vv < 96) ? Cap : (vv > 104) ? Cam : Cnu;
         const char* vi = (vp > 74) ? Cap : (vp < 33) ? Cam : Cnu;     
-        printf(Cnn "%02d " Cna "%-*s %s%*d %s%3d%% %s\n",
+        printf(Cnn "%02d " Cna "%-*s %s%*d %s%3d %s\n",
                i + 1, Pro->FMN + Pro->dat[k].FCN, Pro->dat[k].name, vs, Pro->FMP, avg, vi, vp, trend); }
     os_free(idx); vv = ((today_S - total_S) * 100) / total_S;
-    printf(Cna "\n🏦 🛒 %d 🔮 %d" Cnu "\n        💳 %d ", Pro->MaxV, rp, total_S); fflush(stdout);
-    if (vv != 0) printf("%s %d" Cnu " (%s%+d %+d%%" Cnu ")\n", (vv > 0) ? Cam "📈" : Cap "📉", today_S, (vv > 0) ? Cam : Cap, today_S - total_S, vv);
+    printf(Cna "\n{%d} (?) %d" Cnu "\n %d ", Pro->MaxV, rp, total_S); fflush(stdout);
+    if (vv != 0) printf("%s %d" Cnu " (%s%+d %+d%%" Cnu ")\n", (vv > 0) ? Cam "^" : Cap "v", today_S, (vv > 0) ? Cam : Cap, today_S - total_S, vv);
     while (1) {
         delay_ms(60);
         const char* k = GetKey();
@@ -326,7 +326,7 @@ void Products(Dic* Pro) {
                                     IN.name[StrLenB(IN.name)] = 0; cr = -1; }
                                 if (cr == -1) { 
                                     if (AddDic(Pro, IN.name, IN.price, IN.col) == -1) { 
-                                        printf("\n🚩\n"); fflush(stdout); delay_ms(1500); IN.col = -1; continue; }
+                                        printf("\n??\n"); fflush(stdout); delay_ms(1500); IN.col = -1; continue; }
                                     if (IN.len > Pro->FMN) Pro->FMN = IN.len;
                                     if (IN.lp > Pro->FMP) Pro->FMP = IN.lp; }
                                 else { 
