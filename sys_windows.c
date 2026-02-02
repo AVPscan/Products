@@ -229,7 +229,7 @@ void SetInputMode(int raw) {
         FlushConsoleInputBuffer(hIn);
         SetConsoleMode(hIn, oldModeIn);
         SetConsoleMode(hOut, oldModeOut);
-        setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
+        setvbuf(stdout, NULL, _IOLBF, BUFSIZ); } }
 
 const char* GetKey(void) {
     static char b[5]; 
