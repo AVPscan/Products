@@ -222,8 +222,9 @@ void SetInputMode(int raw) {
         SetConsoleOutputCP(65001);
         GetConsoleMode(hIn, &oldModeIn);
         GetConsoleMode(hOut, &oldModeOut);
-        DWORD newModeIn = ENABLE_VIRTUAL_TERMINAL_INPUT | ENABLE_EXTENDED_FLAGS;
-        newModeIn &= ~(ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_QUICK_EDIT_MODE);
+        DWORD newModeIn = oldModeIn; 
+        newModeIn &= ~(ENABLE_MOUSE_INPUT | ENABLE_QUICK_EDIT_MODE | ENABLE_WINDOW_INPUT);
+        // newModeIn |= ENABLE_VIRTUAL_TERMINAL_INPUT; 
         SetConsoleMode(hIn, newModeIn);
         SetConsoleMode(hOut, oldModeOut | ENABLE_VIRTUAL_TERMINAL_PROCESSING); } 
     else {
