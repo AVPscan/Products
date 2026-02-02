@@ -222,7 +222,9 @@ void SetInputMode(int raw) {
         SetConsoleOutputCP(65001);
         GetConsoleMode(hIn, &oldModeIn);
         GetConsoleMode(hOut, &oldModeOut);
-        SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS); 
+        DWORD newModeIn = ENABLE_VIRTUAL_TERMINAL_INPUT | ENABLE_EXTENDED_FLAGS;
+        newModeIn &= ~(ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_QUICK_EDIT_MODE);
+        SetConsoleMode(hIn, newModeIn);
         SetConsoleMode(hOut, oldModeOut | ENABLE_VIRTUAL_TERMINAL_PROCESSING); } 
     else {
         printf( Crs ); fflush(stdout);
