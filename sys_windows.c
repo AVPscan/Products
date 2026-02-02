@@ -217,6 +217,7 @@ void SetInputMode(int raw) {
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     static DWORD oldModeIn, oldModeOut;
     if (raw) {
+        setvbuf(stdout, NULL, _IONBF, 0); 
         SetConsoleCP(65001);
         SetConsoleOutputCP(65001);
         GetConsoleMode(hIn, &oldModeIn);
@@ -224,6 +225,7 @@ void SetInputMode(int raw) {
         SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS); 
         SetConsoleMode(hOut, oldModeOut | ENABLE_VIRTUAL_TERMINAL_PROCESSING); } 
     else {
+        setvbuf(stdout, NULL, _IOLBF, BUFSIZ); 
         SetConsoleMode(hIn, oldModeIn);
         SetConsoleMode(hOut, oldModeOut); } }
 
