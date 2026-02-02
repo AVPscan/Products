@@ -238,8 +238,8 @@ const char* GetKey(void) {
     DWORD events = 0;
     if (!GetNumberOfConsoleInputEvents(hIn, &events) || events == 0) return b;
     INPUT_RECORD ir;
-    DWORD read_ev;
-    if (!ReadConsoleInputW(hIn, &ir, 1, &read) || read == 0) return b;
+    DWORD read_count; 
+    if (!ReadConsoleInputW(hIn, &ir, 1, &read_count)) return b;
     if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown) return b;
     WORD vk = ir.Event.KeyEvent.wVirtualKeyCode;
     WCHAR wc = ir.Event.KeyEvent.uChar.UnicodeChar;
