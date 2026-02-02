@@ -20,6 +20,7 @@
     *   `Alphabet` — Product names / Имя товара.
     *   `Digits` — Prices / Цена.
     *   `Left + Digit` — Set quantity / Ввод количества (стрелка Влево + цифра).
+    *   `Tab`,`Right` — Auto / Автодополнение слова если есть в словаре.
 *   **Fast Add / Быстрый ввод**: 
     *   Real-time suggestions. If there's one match and price > 0, press `Enter` to add.
     *   Подсказки на лету. Если совпадение одно и цена введена — `Enter` добавит товар.
