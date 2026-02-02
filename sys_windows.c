@@ -225,18 +225,20 @@ void SetInputMode(int raw) {
         SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS); 
         SetConsoleMode(hOut, oldModeOut | ENABLE_VIRTUAL_TERMINAL_PROCESSING); } 
     else {
-        setvbuf(stdout, NULL, _IOLBF, BUFSIZ); 
+        printf( Crs ); fflush(stdout);
+        FlushConsoleInputBuffer(hIn);
         SetConsoleMode(hIn, oldModeIn);
-        SetConsoleMode(hOut, oldModeOut); } }
+        SetConsoleMode(hOut, oldModeOut);
+        setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
 
 const char* GetKey(void) {
     static char b[5]; 
     memset(b, 0, sizeof(b));
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD events = 0;
+    if (!GetNumberOfConsoleInputEvents(hIn, &events) || events == 0) return b;
     INPUT_RECORD ir;
-    DWORD read;
-    GetNumberOfConsoleInputEvents(hIn, &read);
-    if (read == 0) return b; 
+    DWORD read_ev;
     if (!ReadConsoleInputW(hIn, &ir, 1, &read) || read == 0) return b;
     if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown) return b;
     WORD vk = ir.Event.KeyEvent.wVirtualKeyCode;
