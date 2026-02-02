@@ -236,7 +236,7 @@ const char* GetKey(void) {
     memset(b, 0, sizeof(b));
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     DWORD events = 0;
-    if (!GetNumberOfConsoleInputEvents(hIn, &events) || events == 0) return b;
+    if (!GetNumberOfConsoleInputEvents(hIn, &events) || events == 0) { b[0] = 27; return b; }
     INPUT_RECORD ir;
     DWORD read_count; 
     if (!ReadConsoleInputW(hIn, &ir, 1, &read_count)) return b;
