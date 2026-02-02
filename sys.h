@@ -57,7 +57,6 @@ enum {
     K_HOM, K_END, K_PUP, K_PDN, K_INS, K_DEL,
     K_F1, K_F2, K_F3, K_F4, K_F5, K_F6, K_F7, K_F8, K_F9, K_F10, K_F11, K_F12,
     K_SPA, K_BAC, K_ENT, K_TAB, K_CRC };
-    
 void* os_open_file(const char* name);
 void* os_create_file(const char* name);
 void  os_close_file(void* handle);
@@ -71,14 +70,12 @@ void  os_memset(void* ptr, int val, size_t size);
 char* os_strdup(const char* s);
 void  os_printf(const char* format, ...);
 int   os_snprintf(char* buf, size_t size, const char* format, ...);
-//=== Рабочая директория ===
 void SWD(void);
-/* --- Время и Задержки --- */
 void  delay_ms(int ms);
-/* --- Ввод и Клавиатура --- */
+/*___________________________________________________________________________*/
 void  SetInputMode(int raw);
 const char* GetKey(void);
-
+/*___________________________________________________________________________*/
 int AutoEncryptOrValidate(const char *fname);
 int SendMailSecure(const char *fname, const char *target);
 #endif /* SYS_H */

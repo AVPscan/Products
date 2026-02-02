@@ -36,10 +36,8 @@ int StringBC(const char *s, int *c) {
     while (s[b]) { if ((s[b] & 0xC0) != 0x80) i++; b++; } 
     if (c) *c = i;
     return b; }
-    
 int StrLenB(const char *s) {
     return s ? strlen(s) : 0; }
-    
 int StrLen(const char *s) {
     if (!s) return 0; 
     const unsigned char *p = (const unsigned char *)s;
@@ -61,7 +59,6 @@ int CharType(const unsigned char* buf, int* len) {
             else { *len = 1; return 5; }
     *len = l; for (int i = 1; i < l; i++) if ((buf[i] & 0xC0) != 0x80) return 5;
     return 2; }
-
 char* STU(const char* s) {
     int i = 0;
     while (s[i] && i < (BufN - 1)) {
@@ -75,7 +72,6 @@ void ClearDic(Dic* Pro) {
     if (Pro->dat) { for (int i = 0; i < Pro->count; i++) os_free(Pro->dat[i].name);
                     os_free(Pro->dat); }
     os_memset(Pro, 0, sizeof(Dic)); }
-
 typedef struct { int n3, n2, n1, bnam, cnam, sum, tqy, qy, tst; } PS_t;
 PS_t PS;
 int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode) {
@@ -160,7 +156,6 @@ void ParseBuf( Dic* Pro, unsigned char* buf, unsigned char* out, int mode) {
                         case 2: if (PS.qy) j = AddDicFull(Pro, nc, PS.n1, PS.n2, PS.n3, 1);
                                 PS.tst += PS.n1; PS.cnam = 0; PS.sum = 0; PS.tqy = 0;  PS.qy = 0; }
         buf+=len; } }
-
 int LoadDic(Dic* Pro, const char* filename) {
     int f = -1,i = (strcmp(filename, DBase) == 0) ? 0 : 
                    (strncmp(filename, "rep", 3) == 0) ? 1 : (strncmp(filename, "ana", 3) == 0) ? 2 : 3;
@@ -177,7 +172,6 @@ int LoadDic(Dic* Pro, const char* filename) {
             os_close_file(File); Pro->Fsum[i] = PS.tst; 
             if (PS.n1 > 0 && PS.tst != PS.n1) { Pro->Fsum[i] = 0; f = -2; } } }
     return f; }
-    
 int SaveDic(Dic* Pro, const char* filename) {
     int k,s,n, i = (strcmp(filename, DBase) == 0) ? 0 : 
                       (strncmp(filename, "rep", 3) == 0) ? 1 : 
@@ -192,7 +186,6 @@ int SaveDic(Dic* Pro, const char* filename) {
                           os_print_file(f, "%*d %*d %*d %s\n", Pro->FMV, Pro->dat[k].vis, Pro->FMT, Pro->dat[k].tqy, Pro->FMS,
                                             Pro->dat[k].summa, STU(Pro->dat[k].name)); } }
     Pro->Fsum[i] = s; os_print_file(f, "%d\n", s); os_close_file(f); return Pro->Fsum[i]; }
-
 int PrintDic(Dic* Pro) {
     int n = 0;
     for (int i = 0; i < Pro->count; i++) { 
@@ -260,7 +253,6 @@ int Fpi(Dic* Pro, const char *s, int *i) {
         else if (cmp < 0) low = mid + 1;
             else high = mid - 1; }
     return (last - first + 1); }
-        
 char* prw(Dic* Pro, const char *str1, int i) {
     char *res = (char*)(FileBuf + NBuf);
     int b1, c1, b2, c2, sp;
@@ -269,7 +261,6 @@ char* prw(Dic* Pro, const char *str1, int i) {
     else { const char *full_name = Pro->dat[i].name;
            b2 = StringBC(full_name, &c2); sp = Pro->FMN + b2 - c2; sprintf(res, Cna "%s" Cnn "%-*s", str1, sp - b1, full_name + b1); }
     return res; }
-    
 typedef struct { char name[BufN+1]; int len,price,lp,col; } IN_t;
 IN_t IN;
 void Products(Dic* Pro) { 

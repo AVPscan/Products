@@ -18,7 +18,6 @@
 
 #include "sys.h"
 
-// Константы цветов и управления терминалом (ANSI работают в новых Windows 10+)
 //#define USE_BW
 #define USE_RGB
 
@@ -58,7 +57,6 @@
 #define DBuf 4096
 #define NBuf 1024
 
-// Файловые операции
 void* os_open_file(const char* name) { return (void*)fopen(name, "rb"); }
 void* os_create_file(const char* name) { return (void*)fopen(name, "wb"); }
 void  os_close_file(void* handle) { if (handle) fclose((FILE*)handle); }
@@ -70,8 +68,6 @@ int   os_read_file_at(void* handle, long offset, unsigned char* buf, int len) {
     FILE* f = (FILE*)handle;
     if (fseek(f, offset, SEEK_SET) != 0) return 0;
     return (int)fread(buf, 1, len, f); }
-
-// Память
 void* os_malloc(size_t size) { return malloc(size); }
 void* os_realloc(void* ptr, size_t size) { return realloc(ptr, size); }
 void  os_free(void* ptr) { free(ptr); }
@@ -79,8 +75,6 @@ void  os_memset(void* ptr, int val, size_t size) { memset(ptr, val, size); }
 char* os_strdup(const char* s) {
     if (!s) return NULL;
     return _strdup(s); }
-
-// Вывод
 int os_print_file(void* handle, const char* format, ...) {
     if (!handle) return 0;
     va_list args; va_start(args, format);
@@ -94,22 +88,14 @@ void os_printf(const char* format, ...) {
     va_list args; va_start(args, format);
     vprintf(format, args);
     va_end(args); }
-
-// Задержка
 void delay_ms(int ms) { if (ms > 0) Sleep(ms); }
-
 unsigned char FileBuf[DBuf+NBuf];
-
-// Рабочая директория (через GetModuleFileNameA)
 void SWD(void) {
     char path[MAX_PATH];
     DWORD len = GetModuleFileNameA(NULL, path, MAX_PATH);
     if (len == 0) return;
     for (char *p = path + len; p > path; p--) {
         if (*p == '\\' || *p == '/') { *p = '\0'; _chdir(path); break; } } }
-
-// === HWID (Windows version) ===
-
 void UniversalHwid(void) {
     unsigned char* curr = FileBuf;
     unsigned char* const end = FileBuf + DBuf + NBuf - 1;
@@ -141,18 +127,14 @@ void UniversalHwid(void) {
     while (p < FileBuf + 32) { 
         *p = *(map + ((*p ^ (unsigned char)(p - FileBuf) * 7) & 31)); p++; }
     *p = '\0'; }
-
 int IsXDigit(int c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
-
 static int HexVal(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     return ((c >= 'A' && c <= 'Z' ? c + 32 : c) - 'a' + 10); }
-
 static void ValToHex(unsigned char b, char *out) {
     const char *h = "0123456789ABCDEF";
     out[0] = h[b >> 4]; out[1] = h[b & 0x0F]; }
-
 static void Crypt(unsigned char *buf, int len) {
     unsigned char salt[] = {0xAC, 0x77, 0x5F, 0x12, 0x88, 0x33, 0x22, 0x11};
     for (int i = 0; i < len; i++) {
@@ -161,7 +143,6 @@ static void Crypt(unsigned char *buf, int len) {
         key ^= (unsigned char)((idx >> 3) | (idx << 5));
         key ^= salt[(idx + 3) & 7];
         buf[i] ^= key; } }
-
 int AutoEncryptOrValidate(const char *fname) {
     static int hw_ok = 0; if (!hw_ok) { UniversalHwid(); hw_ok = 1; }
     void* h = os_open_file(fname); if (!h) return 1;
@@ -211,7 +192,7 @@ int AutoEncryptOrValidate(const char *fname) {
                 r_ptr = raw; while (r_ptr < raw + 130) *r_ptr++ = 0;
                 return 0; } } }
     return 2; }
-
+/*___________________________________________________________________________*/
 void SetInputMode(int raw) {
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -233,7 +214,6 @@ void SetInputMode(int raw) {
         SetConsoleMode(hIn, oldModeIn);
         SetConsoleMode(hOut, oldModeOut);
         setvbuf(stdout, NULL, _IOLBF, BUFSIZ); } }
-
 const char* GetKey(void) {
     static char b[5]; 
     memset(b, 0, sizeof(b));
@@ -272,10 +252,7 @@ const char* GetKey(void) {
         return b; }
     b[0] = 27;
     return b; }
-
-
-// === Отправка почты (Windows curl) ===
-
+/*___________________________________________________________________________*/
 int SendMailSecure(const char *fname, const char *target) {
     void* h = os_open_file(fname);
     if (!h) return 1;

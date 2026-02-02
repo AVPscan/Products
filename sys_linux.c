@@ -98,12 +98,10 @@ void   os_printf(const char* format, ...) {
     va_start(args, format);
     vprintf(format, args);
     va_end(args); }
-        
 void delay_ms(int ms) {
     if (ms > 0) { struct timespec ts; ts.tv_sec = ms / 1000;
     ts.tv_nsec = (ms % 1000) * 1000000L; nanosleep(&ts, NULL); } }
-    
-//=== Ввод/клавиатура ===
+/*___________________________________________________________________________*/
 void SetInputMode(int raw) {
     static struct termios oldt;
     if (raw) {
@@ -114,7 +112,6 @@ void SetInputMode(int raw) {
         fcntl(0, F_SETFL, O_NONBLOCK); } 
     else { tcsetattr(0, TCSANOW, &oldt);
         fcntl(0, F_SETFL, 0); } } 
-
 typedef struct { const char *name; unsigned char id; } KeyIDMap;
 KeyIDMap nameid[] = {
     {"[A", K_UP}, {"[B", K_DOW}, {"[C", K_RIG}, {"[D", K_LEF},
@@ -153,8 +150,7 @@ const char* GetKey(void) {
                           *p++ = nameid[j].id; *p = 0; return b; } } }
                   __attribute__((fallthrough));
          default: *p = 0;   return b; } }        
-
-//=== Рабочая директория ===
+/*___________________________________________________________________________*/
 unsigned char FileBuf[DBuf+NBuf];
 void SWD(void) {
     char *path = (char *)FileBuf;
@@ -164,7 +160,6 @@ void SWD(void) {
     if (strncmp(path, "/nix/store", 10) == 0) { const char *home = getenv("HOME"); if (home != NULL) chdir(home);
                                                 return; }
     for (char *p = path + len; p > path; p--) if (*p == '/') { *p = '\0'; chdir(path); break; } }
-    
 void UniversalHwid(void) {
     void* h; void* h2;
     int n;
@@ -234,18 +229,14 @@ void UniversalHwid(void) {
     unsigned char* p = FileBuf;
     while (p < FileBuf+32) { *p = *(map + ((*p ^ (p - FileBuf) * 7) & 31)); p++; }
     *p = '\0'; }
-
 int IsXDigit(int c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
-    
 static int HexVal(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     return ((c >= 'A' && c <= 'Z' ? c + 32 : c) - 'a' + 10); }
-
 static void ValToHex(unsigned char b, char *out) {
     const char *h = "0123456789ABCDEF";
     out[0] = h[b >> 4]; out[1] = h[b & 0x0F]; }
-    
 static void Crypt(unsigned char *buf, int len) {
     unsigned char salt[] = {0xAC, 0x77, 0x5F, 0x12, 0x88, 0x33, 0x22, 0x11};
     for (int i = 0; i < len; i++) {
@@ -254,7 +245,6 @@ static void Crypt(unsigned char *buf, int len) {
         key ^= (unsigned char)((idx >> 3) | (idx << 5));
         key ^= salt[(idx + 3) & 7];
         buf[i] ^= key; } }
-    
 int AutoEncryptOrValidate(const char *fname) {
     static int hw_ok = 0; if (!hw_ok) { UniversalHwid(); hw_ok = 1; }
     void* h = os_open_file(fname); if (!h) return 1;
@@ -304,7 +294,6 @@ int AutoEncryptOrValidate(const char *fname) {
                 r_ptr = raw; while (r_ptr < raw + 130) *r_ptr++ = 0;
                 return 0; } } }
     return 2; }
-
 int SendMailSecure(const char *fname, const char *target) {
     void* h = os_open_file(fname);
     if (!h) return 1;

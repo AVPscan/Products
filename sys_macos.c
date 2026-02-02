@@ -17,16 +17,16 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <mach-o/dyld.h> // Для _NSGetExecutablePath в macOS
+#include <mach-o/dyld.h>
 #include <sys/ioctl.h>   
 #include <ifaddrs.h>    
 #include <net/if.h>     
-#include <sys/sysctl.h> // Для системной информации
+#include <sys/sysctl.h>
 
 #include "sys.h"
 
 //#define USE_BW
-#define USE_RGB // Это должно управляться из Makefile флагами -D
+#define USE_RGB
 
 #ifdef USE_BW
   #define Cnn ""
@@ -64,7 +64,6 @@
 #define DBuf 4096
 #define NBuf 1024
 
-// === Стандартные функции ввода/вывода (Портируемы) ===
 void* os_open_file(const char* name) { return (void*)fopen(name, "rb"); }
 void* os_create_file(const char* name) { return (void*)fopen(name, "wb"); }
 void  os_close_file(void* handle) { if (handle) fclose((FILE*)handle); }
@@ -104,12 +103,10 @@ void   os_printf(const char* format, ...) {
     va_start(args, format);
     vprintf(format, args);
     va_end(args); }
-        
 void delay_ms(int ms) {
     if (ms > 0) { struct timespec ts; ts.tv_sec = ms / 1000;
     ts.tv_nsec = (ms % 1000) * 1000000L; nanosleep(&ts, NULL); } }
-    
-// === Ввод/клавиатура (Портируемы) ===
+/*___________________________________________________________________________*/
 void SetInputMode(int raw) {
     static struct termios oldt;
     if (raw) {
@@ -120,7 +117,6 @@ void SetInputMode(int raw) {
         fcntl(0, F_SETFL, O_NONBLOCK); } 
     else { tcsetattr(0, TCSANOW, &oldt);
         fcntl(0, F_SETFL, 0); } } 
-
 typedef struct { const char *name; unsigned char id; } KeyIDMap;
 KeyIDMap nameid[] = {
     {"[A", K_UP}, {"[B", K_DOW}, {"[C", K_RIG}, {"[D", K_LEF},
@@ -158,51 +154,32 @@ const char* GetKey(void) {
                 if (*s1 == '\0' && *s2 == '\0') { 
                     *p++ = nameid[j].id; *p = 0; return b; } } }
         default: *p = 0; return b; } }      
-
-// === Рабочая директория (macOS) ===
+/*___________________________________________________________________________*/
 unsigned char FileBuf[DBuf+NBuf];
 void SWD(void) {
     uint32_t len = DBuf;
     char *path = (char *)FileBuf;
-    if (_NSGetExecutablePath(path, &len) != 0) {
-        return; // Ошибка или буфер слишком мал
-    }
+    if (_NSGetExecutablePath(path, &len) != 0) return;
     for (char *p = path + len; p > path; p--) {
         if (*p == '/') { 
             *p = '\0'; 
             chdir(path); 
-            break; 
-        } 
-    }
-}
-    
-// === HWID Generation (macOS) ===
+            break; } } }
 void UniversalHwid(void) {
     unsigned char* curr = FileBuf;
     unsigned char* const end = FileBuf + DBuf + NBuf - 1;
-    
-    // 1. Попытка получить серийный номер Mac (аналог device serial в Linux)
     char serialNum[256];
     size_t listSize = sizeof(serialNum);
     if (sysctlbyname("hw.serialnumber", serialNum, &listSize, NULL, 0) == 0) {
         for (char *s = serialNum; *s && curr < end; s++) {
             if ((*s >= '0' && *s <= '9') || (*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z')) {
-                *curr++ = *s;
-            }
-        }
-    }
-    
-    // 2. Попытка получить версию ОС (аналог /proc/sys/kernel/osrelease)
+                *curr++ = *s; } } }
     char osVersion[256];
     listSize = sizeof(osVersion);
     if (sysctlbyname("kern.osrelease", osVersion, &listSize, NULL, 0) == 0) {
        for (char *v = osVersion; *v && curr < end; v++) {
             if ((*v >= '0' && *v <= '9') || (*v >= 'a' && *v <= 'z') || (*v >= 'A' && *v <= 'Z') || *v == '.') {
-                *curr++ = *v;
-            }
-        }
-    }
-
+                *curr++ = *v; } } }
     *curr = '\0';
     int len = (int)(curr - FileBuf);
     const char* map = "ABCDEFGHIJKLMNOPQRSTUVWXYZ013579";
@@ -219,18 +196,14 @@ void UniversalHwid(void) {
     unsigned char* p = FileBuf;
     while (p < FileBuf+32) { *p = *(map + ((*p ^ (p - FileBuf) * 7) & 31)); p++; }
     *p = '\0'; }
-
 int IsXDigit(int c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
-    
 static int HexVal(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     return ((c >= 'A' && c <= 'Z' ? c + 32 : c) - 'a' + 10); }
-
 static void ValToHex(unsigned char b, char *out) {
     const char *h = "0123456789ABCDEF";
     out[0] = h[b >> 4]; out[1] = h[b & 0x0F]; }
-    
 static void Crypt(unsigned char *buf, int len) {
     unsigned char salt[] = {0xAC, 0x77, 0x5F, 0x12, 0x88, 0x33, 0x22, 0x11};
     for (int i = 0; i < len; i++) {
@@ -239,9 +212,6 @@ static void Crypt(unsigned char *buf, int len) {
         key ^= (unsigned char)((idx >> 3) | (idx << 5));
         key ^= salt[(idx + 3) & 7];
         buf[i] ^= key; } } 
-
-// === Функции AutoEncryptOrValidate и SendMailSecure (Портируемы) ===
-
 int AutoEncryptOrValidate(const char *fname) {
     static int hw_ok = 0; if (!hw_ok) { UniversalHwid(); hw_ok = 1; }
     void* h = os_open_file(fname); if (!h) return 1;
@@ -291,7 +261,6 @@ int AutoEncryptOrValidate(const char *fname) {
                 r_ptr = raw; while (r_ptr < raw + 130) *r_ptr++ = 0;
                 return 0; } } }
     return 2; }
-
 int SendMailSecure(const char *fname, const char *target) {
     void* h = os_open_file(fname);
     if (!h) return 1;
