@@ -354,7 +354,7 @@ void Products(Dic* Pro) {
 
 void help() {
     printf(Cnn "Created by " Cna "Alexey Pozdnyakov" Cnn " in " Cna "01.2026" Cnn 
-           " version " Cna "1.31" Cnn ", email " Cna "avp70ru@mail.ru" Cnn 
+           " version " Cna "1.34" Cnn ", email " Cna "avp70ru@mail.ru" Cnn 
            " github " Cna "https://github.com/AVPscan" Cnn "\n"); }
 
 int main(int argc, char *argv[]) {
