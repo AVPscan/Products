@@ -28,6 +28,8 @@
 
 #include "sys.h"
 
+uint64_t get_cycles(void) { return mach_absolute_time(); }
+
 void* os_open_file(const char* name) { return (void*)fopen(name, "rb"); }
 void* os_create_file(const char* name) { return (void*)fopen(name, "wb"); }
 void  os_close_file(void* handle) { if (handle) fclose((FILE*)handle); }
@@ -118,8 +120,6 @@ const char* GetKey(void) {
                     *p++ = nameid[j].id; *p = 0; return b; } } }
         default: *p = 0; return b; } }      
 /*___________________________________________________________________________*/
-
-uint64_t get_cycles(void) { return mach_absolute_time(); }
     
 static unsigned char* GlobalBuf = NULL; 
 static size_t GlobalLen = 0;
