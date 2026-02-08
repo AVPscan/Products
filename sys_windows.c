@@ -44,19 +44,33 @@ void os_printf(const char* format, ...) {
     vprintf(format, args);
     va_end(args); }
 void delay_ms(int ms) { if (ms > 0) Sleep(ms); }
-
-uint64_t get_cycles(void) {
-    union { uint64_t total; struct { uint32_t lo, hi; } part; } t;
-    __asm__ __volatile__ ("rdtsc" : "=a" (t.part.lo), "=d" (t.part.hi));
-    return t.total; }
     
 static unsigned char* GlobalBuf = NULL; 
 static size_t GlobalLen = 0;
+uint64_t get_cycles(void) {
+    unsigned int lo, hi;
+    __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+    return ((uint64_t)hi << 32) | lo;
+}
+
 unsigned char* GetBuff(size_t *size) {
+    // Округляем до 4КБ (граница страницы в Windows)
     GlobalLen = (*size + 0xFFF) & ~0xFFF;
-    void *ptr = mmap(NULL, GlobalLen, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (ptr == MAP_FAILED) { GlobalBuf = NULL; GlobalLen = 0; return NULL; }
-    GlobalBuf = (unsigned char*)ptr; *size = GlobalLen; return GlobalBuf; }
+    
+    // VirtualAlloc — прямой аналог mmap для Windows
+    // MEM_COMMIT | MEM_RESERVE — выделяет реальную физическую память
+    void *ptr = VirtualAlloc(NULL, GlobalLen, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    
+    if (!ptr) {
+        GlobalBuf = NULL;
+        GlobalLen = 0;
+        return NULL;
+    }
+
+    GlobalBuf = (unsigned char*)ptr;
+    *size = GlobalLen;
+    return GlobalBuf;
+}
 
 void FreeBuff(void) {
     if (GlobalBuf) { munmap(GlobalBuf, GlobalLen); GlobalBuf = NULL; GlobalLen = 0; } }
