@@ -38,7 +38,7 @@ typedef struct {
 
 int StringBC(const char *s, int *c) {
     int b = 0, i = 0; if (!s) { if (c) *c = 0; return 0; }
-    while (s[b]) { if ((s[b] & 0xC0) != 0x80) i++; b++; }
+    while (s[b]) { if ((s[b] & 0xC0) != 0x80) i++; if ((unsigned char)s[b++] >= 0xE0) i++;}
     if (c) *c = i;
     return b; }
 int StrLenB(const char *s) {
@@ -138,7 +138,7 @@ void ParseBuf( Dic* Pro, unsigned char* buf, unsigned char* out, int mode) {
             while (buf < out) { type = CharType(buf, &len);
                 if (type == 1 || type == 3) break;
                 if (type == 2) { for (i = 0; i < len && j < BufN; i++) nc[j++] = buf[i];
-                    PS.cnam++; sq = 0; }
+                    PS.cnam++; sq = 0; if (len > 2) PS.cnam++; }
                 else if (type == 4) { if (j > 0 && !sq) { nc[j++] = ' '; sq = 1; PS.cnam++; } }
                 buf += len; }
             if (j > 0 && nc[j-1] == ' ') { j--; PS.cnam--; }
@@ -350,7 +350,7 @@ void Products(Dic* Pro) {
 
 void help() {
     printf(Cnn "Created by " Cna "Alexey Pozdnyakov" Cnn " in " Cna "01.2026" Cnn 
-           " version " Cna "1.40" Cnn ", email " Cna "avp70ru@mail.ru" Cnn 
+           " version " Cna "1.41" Cnn ", email " Cna "avp70ru@mail.ru" Cnn 
            " github " Cna "https://github.com/AVPscan" Cnn "\n"); }
 
 int main(int argc, char *argv[]) {
