@@ -66,9 +66,9 @@ void delay_ms(int ms) {
         nanosleep(&ts, NULL); cpu_hz = (get_cycles() - start) * 100; if (cpu_hz == 0) cpu_hz = 1; }
     uint64_t total_cycles = (uint64_t)ms * (cpu_hz / 1000); uint64_t start_time = get_cycles();
     if (ms > 2) { struct timespec sleep_ts = {0, (ms - 1) * 1000000L}; nanosleep(&sleep_ts, NULL); }
-    struct timespec check_start; clock_gettime(CLOCK_MONOTONIC_COARSE, &check_start); uint32_t safety = 0;
+    struct timespec check_start; clock_gettime(CLOCK_MONOTONIC_RAW, &check_start); uint32_t safety = 0;
     while ((get_cycles() - start_time) < total_cycles) { __asm__ volatile("pause");
-        if (++safety > 2000) { struct timespec now; clock_gettime(CLOCK_MONOTONIC_COARSE, &now);
+        if (++safety > 2000) { struct timespec now; clock_gettime(CLOCK_MONOTONIC_RAW, &now);
                                if (now.tv_sec > check_start.tv_sec) { cpu_hz = 0; break; }
                                safety = 0; } } }
 /*___________________________________________________________________________*/
