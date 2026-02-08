@@ -73,7 +73,14 @@ unsigned char* GetBuff(size_t *size) {
 }
 
 void FreeBuff(void) {
-    if (GlobalBuf) { munmap(GlobalBuf, GlobalLen); GlobalBuf = NULL; GlobalLen = 0; } }
+    if (GlobalBuf) {
+        // MEM_RELEASE — полное освобождение региона памяти.
+        // Второй параметр ОБЯЗАТЕЛЬНО должен быть 0 при использовании MEM_RELEASE.
+        VirtualFree(GlobalBuf, 0, MEM_RELEASE);
+        GlobalBuf = NULL;
+        GlobalLen = 0;
+    }
+}
     
 void SWD(void) {
     char path[MAX_PATH];
