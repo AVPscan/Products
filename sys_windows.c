@@ -18,45 +18,6 @@
 
 #include "sys.h"
 
-//#define USE_BW
-#define USE_RGB
-
-#ifdef USE_BW
-  #define Cnn ""
-  #define Cna ""
-  #define Cpr ""
-  #define Cnu ""
-  #define Cap ""
-  #define Cam ""
-#else
-  #ifdef USE_RGB
-    #define Cnn "\033[38;2;120;120;120m"
-    #define Cna "\033[38;2;210;105;30m"
-    #define Cpr "\033[38;2;184;134;11m"
-    #define Cnu "\033[38;2;30;144;255m"
-    #define Cap "\033[38;2;34;139;34m"
-    #define Cam "\033[38;2;220;20;60m"
-  #else
-    #define Cnn "\033[38;5;244m"
-    #define Cna "\033[38;5;166m"
-    #define Cpr "\033[38;5;178m"
-    #define Cnu "\033[38;5;27m"
-    #define Cap "\033[38;5;28m"
-    #define Cam "\033[38;5;160m"
-  #endif
-#endif
-
-#define Crs   "\033[0m"
-#define HCur  "\033[?25l"
-#define ShCur "\033[?25h"
-#define Cls   "\033[2J\033[H"
-#define SCur  "\033[s"
-#define LCur  "\033[u"
-#define Cce   "\033[K"
-
-#define DBuf 4096
-#define NBuf 1024
-
 void* os_open_file(const char* name) { return (void*)fopen(name, "rb"); }
 void* os_create_file(const char* name) { return (void*)fopen(name, "wb"); }
 void  os_close_file(void* handle) { if (handle) fclose((FILE*)handle); }
@@ -68,13 +29,7 @@ int   os_read_file_at(void* handle, long offset, unsigned char* buf, int len) {
     FILE* f = (FILE*)handle;
     if (fseek(f, offset, SEEK_SET) != 0) return 0;
     return (int)fread(buf, 1, len, f); }
-void* os_malloc(size_t size) { return malloc(size); }
-void* os_realloc(void* ptr, size_t size) { return realloc(ptr, size); }
-void  os_free(void* ptr) { free(ptr); }
-void  os_memset(void* ptr, int val, size_t size) { memset(ptr, val, size); }
-char* os_strdup(const char* s) {
-    if (!s) return NULL;
-    return _strdup(s); }
+void  os_memset(void* ptr, int val, size_t size) { unsigned char* p = (unsigned char*)ptr; while (size--) *p++ = (unsigned char)val; }
 int os_print_file(void* handle, const char* format, ...) {
     if (!handle) return 0;
     va_list args; va_start(args, format);
@@ -89,7 +44,23 @@ void os_printf(const char* format, ...) {
     vprintf(format, args);
     va_end(args); }
 void delay_ms(int ms) { if (ms > 0) Sleep(ms); }
-unsigned char FileBuf[DBuf+NBuf];
+
+uint64_t get_cycles(void) {
+    union { uint64_t total; struct { uint32_t lo, hi; } part; } t;
+    __asm__ __volatile__ ("rdtsc" : "=a" (t.part.lo), "=d" (t.part.hi));
+    return t.total; }
+    
+static unsigned char* GlobalBuf = NULL; 
+static size_t GlobalLen = 0;
+unsigned char* GetBuff(size_t *size) {
+    GlobalLen = (*size + 0xFFF) & ~0xFFF;
+    void *ptr = mmap(NULL, GlobalLen, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED) { GlobalBuf = NULL; GlobalLen = 0; return NULL; }
+    GlobalBuf = (unsigned char*)ptr; *size = GlobalLen; return GlobalBuf; }
+
+void FreeBuff(void) {
+    if (GlobalBuf) { munmap(GlobalBuf, GlobalLen); GlobalBuf = NULL; GlobalLen = 0; } }
+    
 void SWD(void) {
     char path[MAX_PATH];
     DWORD len = GetModuleFileNameA(NULL, path, MAX_PATH);
@@ -97,8 +68,8 @@ void SWD(void) {
     for (char *p = path + len; p > path; p--) {
         if (*p == '\\' || *p == '/') { *p = '\0'; _chdir(path); break; } } }
 void UniversalHwid(void) {
-    unsigned char* curr = FileBuf;
-    unsigned char* const end = FileBuf + DBuf + NBuf - 1;
+    unsigned char* curr = GlobalBuf;
+    unsigned char* const end = GlobalBuf + 5119;
     DWORD diskSerial = 0;
     if (GetVolumeInformationA("C:\\", NULL, 0, &diskSerial, NULL, NULL, NULL, 0)) {
         curr += os_snprintf((char*)curr, (size_t)(end - curr), "%08X", (unsigned int)diskSerial); }
@@ -111,21 +82,20 @@ void UniversalHwid(void) {
     if (GetVersionExA(&vi)) {
         curr += os_snprintf((char*)curr, (size_t)(end - curr), "%d%d", (int)vi.dwMajorVersion, (int)vi.dwMinorVersion); }
     *curr = '\0';
-    int len = (int)(curr - FileBuf);
+    int len = (int)(curr - GlobalBuf);
     const char* map = "ABCDEFGHIJKLMNOPQRSTUVWXYZ013579";
     if (len > 32) {
-        unsigned char* s = FileBuf + 32;
-        unsigned char* d = FileBuf;
-        unsigned char* stop = FileBuf + len;
+        unsigned char* s = GlobalBuf + 32;
+        unsigned char* d = GlobalBuf;
+        unsigned char* stop = GlobalBuf + len;
         while (s < stop) {
             *d++ ^= *s++;
-            if (d == FileBuf + 32) d = FileBuf; } } 
+            if (d == GlobalBuf + 32) d = GlobalBuf; } } 
     else if (len < 32 && len > 0) {
-              unsigned char* d = FileBuf + len; while (d < FileBuf + 32) { *d = *(d - len); d++; } }
-        else if (len == 0)  memset(FileBuf, 'X', 32);
-    unsigned char* p = FileBuf;
-    while (p < FileBuf + 32) { 
-        *p = *(map + ((*p ^ (unsigned char)(p - FileBuf) * 7) & 31)); p++; }
+              unsigned char* d = GlobalBuf + len; while (d < GlobalBuf + 32) { *d = *(d - len); d++; } }
+        else if (len == 0)  memset(GlobalBuf, 'X', 32);
+    unsigned char* p = GlobalBuf;
+    while (p < GlobalBuf + 32) { size_t offset = (size_t)(p - GlobalBuf); *p = *(map + ((*p ^ (offset * 7)) & 31)); p++; }
     *p = '\0'; }
 int IsXDigit(int c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
@@ -146,8 +116,8 @@ static void Crypt(unsigned char *buf, int len) {
 int AutoEncryptOrValidate(const char *fname) {
     static int hw_ok = 0; if (!hw_ok) { UniversalHwid(); hw_ok = 1; }
     void* h = os_open_file(fname); if (!h) return 1;
-    unsigned char *f_data = FileBuf + 512;
-    int r = os_read_file(h, f_data, DBuf - 513); os_close_file(h);
+    unsigned char *f_data = GlobalBuf + 512;
+    int r = os_read_file(h, f_data, 3583); os_close_file(h);
     if (r <= 5) return 1;
     unsigned char *p = f_data;
     if (r >= 3 && *p == 0xEF && *(p+1) == 0xBB && *(p+2) == 0xBF) p += 3;
@@ -167,16 +137,16 @@ int AutoEncryptOrValidate(const char *fname) {
             unsigned char *p_en = p_st; while (p_en < f_data + r && *p_en > 32) p_en++;
             int le = (int)(sp - p_start), lp = (int)(p_en - p_st);
             if (le >= 5 && le <= 64 && lp >= 8 && lp <= 64) {
-                unsigned char *raw = FileBuf + 32; unsigned char *r_ptr = raw;
+                unsigned char *raw = GlobalBuf + 32; unsigned char *r_ptr = raw;
                 unsigned char *src = p_start; while (src < sp) *r_ptr++ = *src++;
                 src = p_st; while (src < p_en) *r_ptr++ = *src++;
-                for (int i = 0; i < (le + lp); i++) *(raw + i) ^= *(FileBuf + (i & 31));
+                for (int i = 0; i < (le + lp); i++) *(raw + i) ^= *(GlobalBuf + (i & 31));
                 Crypt(raw, le + lp);
-                char *hdr = (char*)(FileBuf + 162);
+                char *hdr = (char*)(GlobalBuf + 162);
                 ValToHex((unsigned char)le, hdr); ValToHex((unsigned char)lp, hdr + 2);
                 for (int i = 0; i < (le + lp); i++) ValToHex(*(raw + i), hdr + 4 + i * 2);
                 int h_len = 4 + (le + lp) * 2;
-                unsigned char *out = FileBuf + DBuf; unsigned char *o = out;
+                unsigned char *out = GlobalBuf + 4096; unsigned char *o = out;
                 *o++ = 0xEF; *o++ = 0xBB; *o++ = 0xBF;
                 src = f_data; if (*src == 0xEF) src += 3;
                 while (src < p_start) *o++ = *src++;
@@ -257,23 +227,23 @@ int SendMailSecure(const char *fname, const char *target) {
     void* h = os_open_file(fname);
     if (!h) return 1;
     UniversalHwid();
-    unsigned char *p = FileBuf + 512; 
+    unsigned char *p = GlobalBuf + 512; 
     int r = os_read_file(h, p, 7);
     if (r >= 3 && *p == 0xEF) p += 3;
     int le = (HexVal(*p) << 4) | HexVal(*(p+1));
     int lp = (HexVal(*(p+2)) << 4) | HexVal(*(p+3));
     if (le + lp > 128 || le < 5 || lp < 8) { os_close_file(h); return 1; }
-    unsigned char *hex_in = FileBuf + 512;
-    unsigned char *raw    = FileBuf + 32; 
-    unsigned char *em     = FileBuf + 200; 
-    unsigned char *pw     = FileBuf + 300; 
-    unsigned char *cmd    = FileBuf + 512; 
+    unsigned char *hex_in = GlobalBuf + 512;
+    unsigned char *raw    = GlobalBuf + 32; 
+    unsigned char *em     = GlobalBuf + 200; 
+    unsigned char *pw     = GlobalBuf + 300; 
+    unsigned char *cmd    = GlobalBuf + 512; 
     os_read_file(h, hex_in, (le + lp) * 2); 
     os_close_file(h);
     for (int i = 0; i < (le + lp); i++)
         *(raw + i) = (unsigned char)((HexVal(*(hex_in + i*2)) << 4) | HexVal(*(hex_in + i*2 + 1)));
     Crypt(raw, le + lp);
-    for (int i = 0; i < (le + lp); i++) *(raw + i) ^= *(FileBuf + (i & 31));
+    for (int i = 0; i < (le + lp); i++) *(raw + i) ^= *(GlobalBuf + (i & 31));
     unsigned char *s = raw, *d = em;
     while (s < raw + le) *d++ = *s++; 
     *d = 0; d = pw; while (s < raw + le + lp) *d++ = *s++; 

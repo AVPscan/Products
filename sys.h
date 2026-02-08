@@ -12,9 +12,10 @@
 
 #include <stddef.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 //#define USE_BW
-#define USE_RGB
+//#define USE_RGB
 
 #ifdef USE_BW
   #define Cnn ""
@@ -49,9 +50,6 @@
 #define LCur  "\033[u"
 #define Cce   "\033[K"
 
-#define DBuf 4096
-#define NBuf 1024
-
 enum {
     K_ESC = 1, K_UP, K_DOW, K_RIG, K_LEF, 
     K_HOM, K_END, K_PUP, K_PDN, K_INS, K_DEL,
@@ -63,13 +61,13 @@ void  os_close_file(void* handle);
 int   os_read_file(void* handle, unsigned char* buf, int len);
 int   os_read_file_at(void* handle, long offset, unsigned char* buf, int len);
 int   os_print_file(void* handle, const char* format, ...);
-void* os_malloc(size_t size);
-void* os_realloc(void* ptr, size_t size);
-void  os_free(void* ptr);
 void  os_memset(void* ptr, int val, size_t size);
-char* os_strdup(const char* s);
 void  os_printf(const char* format, ...);
 int   os_snprintf(char* buf, size_t size, const char* format, ...);
+
+unsigned char* GetBuff(size_t *size);
+void FreeBuff(void);
+
 void SWD(void);
 void  delay_ms(int ms);
 /*___________________________________________________________________________*/

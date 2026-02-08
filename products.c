@@ -9,20 +9,25 @@
  
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
+#include <stdint.h> 
+
 #include "sys.h"
 
 #define DBase "products.txt"
 #define DRep  "reports.txt"
 #define DAn   "analitics.txt"
 #define DSend "send.txt"
+#define MaxPr 512
 #define Mname 32
 #define BufN Mname*4
 
 char nc[BufN+1];
-extern unsigned char FileBuf[DBuf+NBuf];
 static int LH[Mname];
 static int kpr = 0;
+static unsigned char* FileBuf;
+static unsigned char* str_pool;
+static size_t sz;
+typedef struct { char name[BufN+1]; int len,price,lp,col; } IN_t;
 
 typedef struct { char* name; int price, qy, summa, tqy, vis, nameC,FCN; } DicDat;
 typedef struct {
@@ -67,11 +72,6 @@ char* STU(const char* s) {
         i++; }
     nc[i] = '\0'; return nc; }
 
-void ClearDic(Dic* Pro) {
-    if (!Pro) return;
-    if (Pro->dat) { for (int i = 0; i < Pro->count; i++) os_free(Pro->dat[i].name);
-                    os_free(Pro->dat); }
-    os_memset(Pro, 0, sizeof(Dic)); }
 typedef struct { int n3, n2, n1, bnam, cnam, sum, tqy, qy, tst; } PS_t;
 PS_t PS;
 int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode) {
@@ -100,13 +100,10 @@ int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode)
             return mid; }
         if (cmp < 0) high = mid - 1;
         else low = mid + 1; }
-    if (Pro->count >= Pro->cap) {
-        Pro->cap = (Pro->cap == 0) ? 2 : Pro->cap * 2;
-        DicDat* tmp = os_realloc(Pro->dat, Pro->cap * sizeof(DicDat));
-        if (!tmp) return -1;
-        Pro->dat = tmp; }
-    for (int i = Pro->count; i > low; i--) Pro->dat[i] = Pro->dat[i-1];
-    Pro->dat[low].name = os_strdup(name); Pro->dat[low].nameC = PS.cnam; Pro->dat[low].FCN = PS.bnam - PS.cnam;
+    if (Pro->count >= Pro->cap) return -1;
+    int count_to_move = Pro->count - low; if (count_to_move > 0) {  memmove(&Pro->dat[low + 1], &Pro->dat[low], count_to_move * sizeof(DicDat)); }
+    Pro->dat[low].name = (char*)str_pool; char *d = (char*)str_pool; while ((*d++ = *name++)); 
+    str_pool = (unsigned char*)d; Pro->dat[low].nameC = PS.cnam; Pro->dat[low].FCN = PS.bnam - PS.cnam;
     if (mode) { Pro->dat[low].summa = summa; Pro->dat[low].tqy = tqy; Pro->dat[low].vis = qy; Pro->dat[low].qy = 0;
                 Pro->dat[low].price = summa/tqy; for (r = 1, s = Pro->dat[low].price; s > 9 ; s /= 10, r++);
                 if (Pro->MaxS < summa) { Pro->MaxS = summa; Pro->FMS = PS.sum; }
@@ -164,11 +161,11 @@ int LoadDic(Dic* Pro, const char* filename) {
         if (File) {
             f++; PS.cnam = 0; PS.sum = 0; PS.tqy = 0;  PS.qy = 0; PS.tst = 0;
             while (1) {
-                size_t lf = os_read_file(File, FileBuf + Tail, DBuf); size_t sf = lf + Tail; if (sf == 0) break;
-                size_t sl = sf; if (lf == DBuf) { while (sl > 0 && (FileBuf[sl-1] > 32)) sl--;
+                size_t lf = os_read_file(File, FileBuf + Tail, 4096); size_t sf = lf + Tail; if (sf == 0) break;
+                size_t sl = sf; if (lf == 4096) { while (sl > 0 && (FileBuf[sl-1] > 32)) sl--;
                                                   if (sl == 0) sl = sf; }
                 ParseBuf(Pro, FileBuf, FileBuf+sl, i); Tail = sf - sl; if (Tail > 0) memmove(FileBuf, FileBuf + sl, Tail);
-                if (lf < DBuf) break; }
+                if (lf < 4096) break; }
             os_close_file(File); Pro->Fsum[i] = PS.tst;
             if (PS.n1 > 0 && PS.tst != PS.n1) { Pro->Fsum[i] = 0; f = -2; } } }
     return f; }
@@ -205,7 +202,7 @@ void Analitics(Dic* Pro) {
         total_S += Pro->dat[i].summa; total_Q += Pro->dat[i].tqy;
         today_S += Pro->dat[i].price * Pro->dat[i].tqy; }
     if (!total_S || !total_Q) return;
-    int *idx = (int*)os_malloc(Pro->count * sizeof(int));
+    int *idx = (int*)((FileBuf + sz - (Pro->count * sizeof(int))));
     for (i = 0; i < Pro->count; i++) idx[i] = i;
     for (i = 0; i < Pro->count - 1; i++)
         for (j = i + 1; j < Pro->count; j++)
@@ -221,7 +218,7 @@ void Analitics(Dic* Pro) {
         const char* vi = (vp > 74) ? Cap : (vp < 33) ? Cam : Cnu;
         printf(Cnn "%02d " Cna "%-*s %s%*d %s%3d %s\n",
                i + 1, Pro->FMN + Pro->dat[k].FCN, Pro->dat[k].name, vs, Pro->FMP, avg, vi, vp, trend); }
-    os_free(idx); vv = ((today_S - total_S) * 100) / total_S;
+    vv = ((today_S - total_S) * 100) / total_S;
     printf(Cna "\n{%d} (?) %d" Cnu "\n %d ", Pro->MaxV, rp, total_S); fflush(stdout);
     if (vv != 0) printf("%s %d" Cnu " (%s%+d %+d%%" Cnu ")\n", (vv > 0) ? Cam "^" : Cap "v", today_S, (vv > 0) ? Cam : Cap, today_S - total_S, vv);
     while (1) {
@@ -254,18 +251,17 @@ int Fpi(Dic* Pro, const char *s, int *i) {
             else high = mid - 1; }
     return (last - first + 1); }
 char* prw(Dic* Pro, const char *str1, int i) {
-    char *res = (char*)(FileBuf + NBuf);
+    char *res = (char*)(FileBuf + 1024);
     int b1, c1, b2, c2, sp;
     b1 = StringBC(str1, &c1);
     if (i < 0 || i >= Pro->count) { sp = Pro->FMN + b1 - c1; sprintf(res, Cna "%-*s", sp, str1); }
     else { const char *full_name = Pro->dat[i].name;
            b2 = StringBC(full_name, &c2); sp = Pro->FMN + b2 - c2; sprintf(res, Cna "%s" Cnn "%-*s", str1, sp - b1, full_name + b1); }
     return res; }
-typedef struct { char name[BufN+1]; int len,price,lp,col; } IN_t;
 IN_t IN;
 void Products(Dic* Pro) {
     int i,tmp,type,b = 0,cr = 0,Pleft = 0,Pnum = 0,num = 0;
-    IN.col = -1;
+    SWD(); IN.col = -1;
     SetInputMode(1); printf(HCur); tmp = LoadDic(Pro, DBase); tmp = LoadDic(Pro, DAn); tmp = LoadDic(Pro, DRep);
     int flag = !AutoEncryptOrValidate(DSend);
     while (1) {
@@ -332,7 +328,7 @@ void Products(Dic* Pro) {
                  case K_UP: Analitics(Pro); num = -1; continue;
                 case K_ESC: printf(LCur Cce); fflush(stdout); tmp = SaveDic(Pro, DBase); tmp = SaveDic(Pro,DAn); tmp = SaveDic(Pro,DRep);
                             if (tmp) { printf(Cnu "%d", tmp); fflush(stdout); if (flag) SendMailSecure(DSend,DRep); }
-                            SetInputMode(0); printf(ShCur); ClearDic(Pro); return;
+                            SetInputMode(0); printf(ShCur); return;
                 case K_BAC:
                 case K_DEL: if (Pnum) {
                                 if (IN.lp) { IN.price /= 10; IN.lp--; }
@@ -360,5 +356,7 @@ void help() {
 int main(int argc, char *argv[]) {
     if (argc > 1) { if (strcmp(argv[1], "-?") == 0 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-help") == 0) help();
                     return 0; }
-    Dic Pro = {0};
-    SWD(); Products(&Pro); return 0; }
+    sz = 131000; if (!(FileBuf = GetBuff(&sz))) return 0;
+    Dic Pro = {0}; 
+    size_t dat_offset = 5120; Pro.dat = (DicDat*)(FileBuf + dat_offset); Pro.cap = 512;
+    size_t pool_offset = dat_offset + (Pro.cap * sizeof(DicDat)); str_pool = FileBuf + pool_offset; Products(&Pro); FreeBuff(); return 0; }
