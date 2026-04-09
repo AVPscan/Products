@@ -74,8 +74,11 @@ c: tiny
 
 musl: g-musl
 g-musl: 
-	@if [ "$(UNAME_S)" != "Linux" ]; then echo "⚠️  MUSL static build is only supported on Linux environment.";
-	else $(MAKE) tiny CC=gcc CFLAGS_TINY="$(CFLAGS_TINY) -static" LDFLAGS_TINY="$(LDFLAGS_TINY) -static"; fi
+	@if [ "$(UNAME_S)" != "Linux" ]; then \
+		echo "⚠️  MUSL static build is only supported on Linux environment."; \
+		exit 1; \
+	fi
+	@$(MAKE) tiny CC=gcc CFLAGS_TINY="$(CFLAGS_TINY) -static" LDFLAGS_TINY="$(LDFLAGS_TINY) -static"
 mac:
 	@if [ "$(UNAME_S)" != "Darwin" ]; then echo "⚠️  'make mac' target only runs on macOS (Darwin).";
 	else $(MAKE) tiny; fi
