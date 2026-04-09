@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <direct.h> // Для _chdir
 #include <winver.h> // Для GetVersionExA (хотя она устарела, но подходит)
