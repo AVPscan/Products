@@ -12,7 +12,7 @@
 
 #include <stddef.h>
 #include <stdarg.h>
-#include <stdint.h>
+#include <string.h>
 
 //#define USE_BW
 //#define USE_RGB
@@ -50,6 +50,26 @@
 #define LCur  "\033[u"
 #define Cce   "\033[K"
 
+#define DBase "products.txt"
+#define DRep  "reports.txt"
+#define DAn   "analitics.txt"
+#define DSend "send.txt"
+#define MaxPr 512
+#define Mname 32
+#define BufN Mname*4
+
+static unsigned char* GlobalBuf = NULL; 
+static size_t GlobalLen = 0;
+static char nc[BufN+1];
+static int LH[Mname];
+static int kpr = 0;
+static unsigned char* FileBuf;
+static unsigned char* str_pool;
+static size_t sz = 0;
+typedef struct { char name[BufN+1]; int len,price,lp,col; } IN_t;
+typedef struct { char* name; int price, qy, summa, tqy, vis, nameC,FCN; } DicDat;
+typedef struct { DicDat* dat; int cap, count, MaxP, MaxQ, MaxS, MaxT, MaxV,FMN,FMP,FMQ,FMS,FMT,FMV; int Fsum[3]; } Dic;
+typedef struct { int n3, n2, n1, bnam, cnam, sum, tqy, qy, tst; } PS_t;
 enum {
     K_ESC = 1, K_UP, K_DOW, K_RIG, K_LEF, 
     K_HOM, K_END, K_PUP, K_PDN, K_INS, K_DEL,
@@ -62,18 +82,18 @@ int   os_read_file(void* handle, unsigned char* buf, int len);
 int   os_read_file_at(void* handle, long offset, unsigned char* buf, int len);
 int   os_print_file(void* handle, const char* format, ...);
 void  os_memset(void* ptr, int val, size_t size);
-void  os_printf(const char* format, ...);
 int   os_snprintf(char* buf, size_t size, const char* format, ...);
+void  os_printf(const char* format, ...);
 
+void Run(void);
 unsigned char* GetBuff(size_t *size);
 void FreeBuff(void);
-
 void SWD(void);
 void  delay_ms(int ms);
+int AutoEncryptOrValidate(const char *fname);
+int SendMailSecure(const char *fname, const char *target);
 /*___________________________________________________________________________*/
 void  SetInputMode(int raw);
 const char* GetKey(void);
 /*___________________________________________________________________________*/
-int AutoEncryptOrValidate(const char *fname);
-int SendMailSecure(const char *fname, const char *target);
 #endif /* SYS_H */

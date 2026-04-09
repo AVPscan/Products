@@ -120,9 +120,7 @@ const char* GetKey(void) {
                     *p++ = nameid[j].id; *p = 0; return b; } } }
         default: *p = 0; return b; } }      
 /*___________________________________________________________________________*/
-    
-static unsigned char* GlobalBuf = NULL; 
-static size_t GlobalLen = 0;
+
 unsigned char* GetBuff(size_t *size) {
     GlobalLen = (*size + 0xFFF) & ~0xFFF;
     void *ptr = mmap(NULL, GlobalLen, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);

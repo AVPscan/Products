@@ -1,162 +1,126 @@
-name: Linux musl static +(Cross-Platform)
+name: Cross-Platform Build & Release
 
-# Внимание: Разрешение на запись необходимо для создания релиза и загрузки файлов
 permissions:
   contents: write
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    tags: 
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number (e.g., 1.31)'
+        description: 'Версия (например: 3.00)'
         required: true
-        type: string
-
+        default: 'manual'
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
-
-  # Задача 1: Сборка исполняемого файла для Linux (статический MUSL)
-  build-linux:
-    # Используем чистый контейнер Alpine Linux, где по умолчанию только MUSL
+  # 1. Честная сборка Musl в Alpine
+  build-musl:
     runs-on: ubuntu-latest
     container: alpine:latest
     steps:
-      - name: Checkout repository
-        # Используем специальный action для работы в контейнере
-        uses: actions/checkout@v4
-      
-      # Используем пакет 'build-base' (включает gcc, libc-dev) и 'make'
-      - name: Install build tools (GCC, make, and musl in Alpine)
-        run: apk add --no-cache build-base make musl binutils
-
-      - name: Run make musl
-        # Просто вызываем вашу цель make musl, которая теперь умная
-        run: make musl
-        
-      - name: Check binary status
+      - uses: actions/checkout@main
+      - name: Build Static
         run: |
-          # 'file' покажет "statically linked", 'ldd' покажет "not a dynamic executable"
-          file products
-          ldd products || echo "✅ Статус: Statically linked"
-          
-      - name: Upload Linux Artifact
-        uses: actions/upload-artifact@v4
+          apk add --no-cache build-base make musl binutils
+          make musl
+      - name: Upload
+        uses: actions/upload-artifact@main
         with:
-          name: linux-executable
-          path: products
+          name: linux-static
+          path: food
 
-  # Задача 2: Сборка исполняемого файла для Windows (стандартная)
-  build-windows:
-    runs-on: windows-latest
+  # 2. Матрица для остальных (без контейнера)
+  build-others:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - desc: "Linux-Dynamic"
+            os: ubuntu-latest
+            cmd: make c
+            artifact: linux-dynamic
+          - desc: "Windows"
+            os: windows-latest
+            cmd: make OS=Windows_NT
+            artifact: windows-executable
+          - desc: "macOS"
+            os: macos-latest
+            cmd: make mac
+            artifact: macos-executable
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Run make OS=Windows_NT
+      - uses: actions/checkout@main
+      - name: Build
         shell: bash
-        # Использует ваш Makefile с фиксацией флагов для Windows
-        run: make OS=Windows_NT
-        
-      - name: Upload Windows Artifact
-        uses: actions/upload-artifact@v4
+        run: ${{ matrix.cmd }}
+      - name: Upload
+        uses: actions/upload-artifact@main
         with:
-          name: windows-executable
-          path: products.exe 
+          name: ${{ matrix.artifact }}
+          path: food*
 
-  # Задача 3: Сборка исполняемого файла для macOS (используя make mac)
-  build-macos:
-    runs-on: macos-latest 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Run make mac
-        # Использует make mac цель из вашего Makefile
-        run: make mac
-
-      - name: Upload macOS Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-executable
-          path: products 
-
-  # Задача 4: Создание релиза и прикрепление артефактов
+  # 3. Релиз, который собирает всё воедино
   create-release:
-    needs: [build-linux, build-windows, build-macos]
+    needs: [build-musl, build-others]
     runs-on: ubuntu-latest
-    outputs:
-      release_version: ${{ steps.get_version.outputs.version }}
     steps:
-      - name: Get the release version from tag or input
-        id: get_version
+      - uses: actions/checkout@main
+      - name: Get Version
+        id: v
+        shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" == "push" ]; then
+            # Самый надежный способ выкусить только цифры из тега
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG_NAME#v}
+            echo "ver=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
           else
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "ver=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
           fi
-      
-      - name: Download Linux Executable
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-executable
-          path: ./artefacts/linux # Скачиваем в уникальную поддиректорию
-      - name: Download Windows Executable
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-executable
-          path: ./artefacts/windows # Скачиваем в уникальную поддиректорию
-      - name: Download macOS Executable
-        uses: actions/download-artifact@v4
-        with:
-          name: macos-executable
-          path: ./artefacts/macos # Скачиваем в уникальную поддиректорию
 
-      - name: Create Release
-        id: create_release
+      - name: Download All
+        uses: actions/download-artifact@main
+        with:
+          path: ./artefacts
+
+      - name: Assets & Upload
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="v${{ steps.get_version.outputs.version }}"
-          RELEASE_NAME="Release v${{ steps.get_version.outputs.version }}"
-          
-          gh release create "$TAG_NAME" \
-            --repo="$GITHUB_REPOSITORY" \
-            --title="$RELEASE_NAME" \
-            --generate-notes \
-            --latest
-            
-          echo "UPLOAD_URL=$(gh release view "$TAG_NAME" --repo="$GITHUB_REPOSITORY" --json uploadUrl -q .uploadUrl)" >> $GITHUB_ENV
+          # 1. Данные
+          NAME=$(basename ${{ github.repository }})
+          VER="${{ steps.v.outputs.ver }}"
+          TAG="v$VER"
 
-      - name: Upload Linux Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./artefacts/linux/products # Указываем путь к файлу в поддиректории
-          asset_name: LinProd-v${{ steps.get_version.outputs.version }}
-          asset_content_type: application/octet-stream
+          gh release create "$TAG" --title="Release $TAG" --generate-notes --latest || echo "Exists"
 
-      - name: Upload Windows Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./artefacts/windows/products.exe # Указываем путь к файлу в поддиректории
-          asset_name: WinProd-v${{ steps.get_version.outputs.version }}.exe
-          asset_content_type: application/octet-stream
-          
-      - name: Upload macOS Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./artefacts/macos/products # Указываем путь к файлу в поддиректории
-          asset_name: AppProd-v${{ steps.get_version.outputs.version }}
-          asset_content_type: application/octet-stream
+          # 2. Создаем временную папку для готовых файлов
+          mkdir -p ./out
 
+          # 3. Собираем файлы из артефактов без лишних префиксов
+          for folder in ./artefacts/*; do
+            if [ -d "$folder" ]; then
+              PLATFORM=$(basename "$folder")
+              
+              find "$folder" -type f | while read -r src; do
+                ext=""
+                [[ "$src" == *.exe ]] && ext=".exe"
+                
+                # Имя файла будет типа: food-linux-static-v2.90
+                # Без всяких sys_ в начале
+                dst="${NAME}-${PLATFORM}-v${VER}${ext}"
+                
+                cp "$src" "./out/$dst"
+                echo "✅ Ready: $dst"
+              done
+            fi
+          done
+
+          # 4. Заходим в папку с готовыми файлами и заливаем всё оттуда
+          cd out
+          sha256sum * > ../checksums.txt
+          gh release upload "$TAG" * ../checksums.txt --clobber

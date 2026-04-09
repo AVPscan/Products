@@ -63,8 +63,6 @@ uint64_t get_cycles(void) {
     __asm__ __volatile__ ("rdtsc" : "=a" (t.part.lo), "=d" (t.part.hi));
     return t.total; }
     
-static unsigned char* GlobalBuf = NULL; 
-static size_t GlobalLen = 0;
 unsigned char* GetBuff(size_t *size) {
     GlobalLen = (*size + 0xFFF) & ~0xFFF;
     void *ptr = mmap(NULL, GlobalLen, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);

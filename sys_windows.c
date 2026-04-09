@@ -45,8 +45,6 @@ void os_printf(const char* format, ...) {
     va_end(args); }
 void delay_ms(int ms) { if (ms > 0) Sleep(ms); }
     
-static unsigned char* GlobalBuf = NULL; 
-static size_t GlobalLen = 0;
 uint64_t get_cycles(void) {
     unsigned int lo, hi;
     __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));

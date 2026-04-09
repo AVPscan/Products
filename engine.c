@@ -8,34 +8,11 @@
  */
  
 #include <stdio.h>
-#include <string.h>
-#include <stdint.h> 
-
 #include "sys.h"
 
-#define DBase "products.txt"
-#define DRep  "reports.txt"
-#define DAn   "analitics.txt"
-#define DSend "send.txt"
-#define MaxPr 512
-#define Mname 32
-#define BufN Mname*4
-
-char nc[BufN+1];
-static int LH[Mname];
-static int kpr = 0;
-static unsigned char* FileBuf;
-static unsigned char* str_pool;
-static size_t sz;
-typedef struct { char name[BufN+1]; int len,price,lp,col; } IN_t;
-
-typedef struct { char* name; int price, qy, summa, tqy, vis, nameC,FCN; } DicDat;
-typedef struct {
-    DicDat* dat;
-    int cap, count, MaxP, MaxQ, MaxS, MaxT, MaxV,FMN,FMP,FMQ,FMS,FMT,FMV;
-    int Fsum[3]; // 0:pro, 1:res, 2:ana
-} Dic;
-
+PS_t PS;
+IN_t IN;
+    
 int StringBC(const char *s, int *c) {
     int b = 0, i = 0; if (!s) { if (c) *c = 0; return 0; }
     while (s[b]) { if ((s[b] & 0xC0) != 0x80) i++; if ((unsigned char)s[b++] >= 0xE0) i++;}
@@ -72,8 +49,6 @@ char* STU(const char* s) {
         i++; }
     nc[i] = '\0'; return nc; }
 
-typedef struct { int n3, n2, n1, bnam, cnam, sum, tqy, qy, tst; } PS_t;
-PS_t PS;
 int AddDicFull(Dic* Pro, const char* name, int summa, int tqy, int qy, int mode) {
     int low = 0, cmp = 0, high = Pro->count - 1, mid, r, s;
     if (Pro->FMN < PS.cnam) Pro->FMN = PS.cnam;
@@ -258,7 +233,7 @@ char* prw(Dic* Pro, const char *str1, int i) {
     else { const char *full_name = Pro->dat[i].name;
            b2 = StringBC(full_name, &c2); sp = Pro->FMN + b2 - c2; sprintf(res, Cna "%s" Cnn "%-*s", str1, sp - b1, full_name + b1); }
     return res; }
-IN_t IN;
+
 void Products(Dic* Pro) {
     int i,tmp,type,b = 0,cr = 0,Pleft = 0,Pnum = 0,num = 0;
     SWD(); IN.col = -1;
@@ -347,16 +322,7 @@ void Products(Dic* Pro) {
                                         LH[kpr++] = cub; strcpy(IN.name + cub, fna + cub);
                                         IN.len = StrLen(IN.name); b = Fpi(Pro,IN.name, &i); cr = i; } } } }
                    default: continue; } } } }
-
-void help() {
-    printf(Cnn "Created by " Cna "Alexey Pozdnyakov" Cnn " in " Cna "01.2026" Cnn 
-           " version " Cna "1.41" Cnn ", email " Cna "avp70ru@mail.ru" Cnn 
-           " github " Cna "https://github.com/AVPscan" Cnn "\n"); }
-
-int main(int argc, char *argv[]) {
-    if (argc > 1) { if (strcmp(argv[1], "-?") == 0 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-help") == 0) help();
-                    return 0; }
-    sz = 131000; if (!(FileBuf = GetBuff(&sz))) return 0;
-    Dic Pro = {0}; 
-    size_t dat_offset = 5120; Pro.dat = (DicDat*)(FileBuf + dat_offset); Pro.cap = 512;
-    size_t pool_offset = dat_offset + (Pro.cap * sizeof(DicDat)); str_pool = FileBuf + pool_offset; Products(&Pro); FreeBuff(); return 0; }
+void Run(void){
+  sz = 131000; if (!(FileBuf = GetBuff(&sz))) return ;
+  Dic Pro = {0}; size_t dat_offset = 5120; Pro.dat = (DicDat*)(FileBuf + dat_offset); Pro.cap = 512;
+  size_t pool_offset = dat_offset + (Pro.cap * sizeof(DicDat)); str_pool = FileBuf + pool_offset; Products(&Pro); FreeBuff(); return; }
