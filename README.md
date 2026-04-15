@@ -1,7 +1,5 @@
 # 🛒 Smart Shopping & Price Analytics / Умные покупки и аналитика цен
-[![Build on Linux](https://github.com/AVPscan/Products/actions/workflows/build-linux.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/build-linux.yml)
-[![Build on Windows](https://github.com/AVPscan/Products/actions/workflows/build-windows.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/build-windows.yml)
-[![Build on macOS](https://github.com/AVPscan/Products/actions/workflows/build-macos.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/build-macos.yml)
+
 [![Linux musl static +(Cross-Platform)](https://github.com/AVPscan/Products/actions/workflows/release.yml/badge.svg)](https://github.com/AVPscan/Products/actions/workflows/release.yml)
 
 **Author:** Алексей Васильевич Поздняков (Alexey V. Pozdnyakov)  
@@ -74,29 +72,6 @@
 
 ---
 
-## 🛠 Сборка и оптимизация
-
-Проект **кроссплатформенный**: Linux / Windows / macOS.
-
-### Extreme Optimization
-- **Бинарный файл при статической линковке с musl static занимает 57 КБ**
-- Исполняемый код целиком помещается в **L1-кэш процессора** → максимальная скорость и мгновенный отклик
-- **Чистый C11**
-
-### Проверено на:
-- **NixOS** — полёт нормальный (тут и писал)
-- **Windows 10/11** — подправил `GetKey()` и `SetInputMode()` — заработало
-- **macOS** — не запускал, но максимум нужно будет подкрутить те же функции
-
-**Главный момент:** теперь абсолютно всё равно, на чём вы сидите — Linux / Windows / macOS. Всё работает одинаково.
-
-### Сборка
-
-```bash
-make         # Флаги Linux/Windows (' ' c g) / MacOs (mac) / Linux static (musl g-musl)
-./products   # Запуск
-products.exe # На Windows
-
 ## 🔐 О защите и HWID
 
 Программа использует аппаратную привязку (HWID) для шифрования данных send.txt. Это значит:
@@ -121,6 +96,31 @@ products.exe # На Windows
 - Никаких зависимостей
 - Кроссплатформа
 - Работает на всём
+
+---
+
+## 🛠 Сборка и оптимизация
+
+Проект **кроссплатформенный**: Linux / Windows / macOS.
+
+### Extreme Optimization
+- **Бинарный файл при статической линковке с musl static занимает 57 КБ**
+- Исполняемый код целиком помещается в **L1-кэш процессора** → максимальная скорость и мгновенный отклик
+- **Чистый C11**
+
+### Проверено на:
+- **NixOS** — полёт нормальный (тут и писал)
+- **Windows 10/11** — подправил `GetKey()` и `SetInputMode()` — заработало
+- **macOS** — не запускал, но максимум нужно будет подкрутить те же функции
+
+**Главный момент:** теперь абсолютно всё равно, на чём вы сидите — Linux / Windows / macOS. Всё работает одинаково.
+
+### Сборка
+
+```bash
+make         # Флаги Linux/Windows (' ' c g) / MacOs (mac) / Linux static (musl g-musl)
+./products   # Запуск
+products.exe # На Windows
 
 ---
 
