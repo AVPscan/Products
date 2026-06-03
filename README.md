@@ -142,4 +142,3 @@ make         # Флаги Linux/Windows (' ' c g) / MacOs (mac) / Linux static (
 ./products   # Запуск
 products.exe # На Windows
 
-
