@@ -58,14 +58,14 @@
 #define Mname 32
 #define BufN Mname*4
 
-static unsigned char* GlobalBuf = NULL; 
-static size_t GlobalLen = 0;
-static char nc[BufN+1];
-static int LH[Mname];
-static int kpr = 0;
-static unsigned char* FileBuf;
-static unsigned char* str_pool;
-static size_t sz = 0;
+extern unsigned char* GlobalBuf; 
+extern size_t GlobalLen;
+extern char nc[BufN+1];
+extern int LH[Mname];
+extern int kpr;
+extern unsigned char* FileBuf;
+extern unsigned char* str_pool;
+extern size_t sz;
 typedef struct { char name[BufN+1]; int len,price,lp,col; } IN_t;
 typedef struct { char* name; int price, qy, summa, tqy, vis, nameC,FCN; } DicDat;
 typedef struct { DicDat* dat; int cap, count, MaxP, MaxQ, MaxS, MaxT, MaxV,FMN,FMP,FMQ,FMS,FMT,FMV; int Fsum[3]; } Dic;

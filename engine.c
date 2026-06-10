@@ -10,9 +10,17 @@
 #include <stdio.h>
 #include "sys.h"
 
+unsigned char* GlobalBuf = NULL; 
+size_t GlobalLen = 0;
+char nc[BufN+1];
+int LH[Mname];
+int kpr = 0;
+unsigned char* FileBuf;
+unsigned char* str_pool;
+size_t sz = 0;
 PS_t PS;
 IN_t IN;
-    
+
 int StringBC(const char *s, int *c) {
     int b = 0, i = 0; if (!s) { if (c) *c = 0; return 0; }
     while (s[b]) { if ((s[b] & 0xC0) != 0x80) i++; if ((unsigned char)s[b++] >= 0xE0) i++;}
@@ -324,5 +332,5 @@ void Products(Dic* Pro) {
                    default: continue; } } } }
 void Run(void){
   sz = 131000; if (!(FileBuf = GetBuff(&sz))) return ;
-  Dic Pro = {0}; size_t dat_offset = 5120; Pro.dat = (DicDat*)(FileBuf + dat_offset); Pro.cap = 512;
+  Dic Pro = {0}; size_t dat_offset = 5120; Pro.dat = (DicDat*)(FileBuf + dat_offset); Pro.cap = MaxPr;
   size_t pool_offset = dat_offset + (Pro.cap * sizeof(DicDat)); str_pool = FileBuf + pool_offset; Products(&Pro); FreeBuff(); return; }
